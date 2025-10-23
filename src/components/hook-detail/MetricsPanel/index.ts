@@ -1,0 +1,2 @@
+export { MetricsPanel } from "./MetricsPanel";
+
