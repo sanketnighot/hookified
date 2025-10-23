@@ -1,0 +1,280 @@
+---
+alwaysApply: true
+description: Rules for proper code structuring in components (frontend) and services (backend)
+---
+
+# Code Structuring Rules
+
+## Frontend Component Structure
+
+### Component Organization
+- Break components into individual files according to responsibilities
+- Use descriptive file names that reflect component purpose
+- Group related components in logical directories
+- Separate presentational and container components
+
+### Component File Structure
+```
+src/
+├── components/
+│   ├── ui/                    # Reusable UI components
+│   │   ├── Button/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Button.test.tsx
+│   │   │   └── index.ts
+│   │   └── Input/
+│   ├── forms/                 # Form-specific components
+│   │   ├── HookForm/
+│   │   └── WalletForm/
+│   ├── layout/                # Layout components
+│   │   ├── Header/
+│   │   ├── Sidebar/
+│   │   └── Footer/
+│   └── features/              # Feature-specific components
+│       ├── hooks/
+│       ├── wallets/
+│       └── dashboard/
+```
+
+### Component Responsibilities
+- **UI Components**: Pure presentational components with minimal logic
+- **Container Components**: Handle state management and business logic
+- **Feature Components**: Combine UI and container components for specific features
+- **Layout Components**: Handle page structure and navigation
+
+### Component Naming
+- Use PascalCase for component names
+- Use descriptive names that indicate purpose
+- Prefix with feature name when appropriate (e.g., `HookCard`, `WalletList`)
+- Use consistent naming patterns across similar components
+
+## Backend Service Structure
+
+### Service Layer Organization
+```
+src/
+├── services/
+│   ├── auth/                  # Authentication services
+│   │   ├── auth.service.ts
+│   │   ├── session.service.ts
+│   │   └── types.ts
+│   ├── hooks/                 # Hook management services
+│   │   ├── hook.service.ts
+│   │   ├── trigger.service.ts
+│   │   └── action.service.ts
+│   ├── wallets/               # Wallet management services
+│   │   ├── wallet.service.ts
+│   │   ├── lit.service.ts
+│   │   └── types.ts
+│   ├── external/               # External service integrations
+│   │   ├── blockscout/
+│   │   ├── telegram/
+│   │   └── supabase/
+│   └── utils/                  # Utility services
+│       ├── validation.service.ts
+│       ├── encryption.service.ts
+│       └── logger.service.ts
+```
+
+### Service Responsibilities
+- **Business Logic Services**: Handle core business operations
+- **Integration Services**: Manage external API integrations
+- **Utility Services**: Provide common functionality
+- **Data Services**: Handle database operations and data transformation
+
+### Service Naming
+- Use descriptive names ending with `.service.ts`
+- Group related services in directories
+- Use consistent naming patterns
+- Include service type in name when helpful
+
+## API Route Structure
+
+### Route Organization
+```
+src/app/api/
+├── auth/
+│   ├── sign-up/
+│   │   └── route.ts
+│   ├── sign-in/
+│   │   └── route.ts
+│   └── sign-out/
+│       └── route.ts
+├── wallets/
+│   ├── route.ts               # GET, POST
+│   └── [id]/
+│       ├── route.ts           # GET, PATCH, DELETE
+│       └── keys/
+│           └── route.ts       # Key management
+├── hooks/
+│   ├── route.ts               # GET, POST
+│   └── [id]/
+│       ├── route.ts           # GET, PATCH, DELETE
+│       ├── run/
+│       │   └── route.ts       # Manual trigger
+│       └── disable/
+│           └── route.ts       # Disable hook
+├── templates/
+│   ├── route.ts               # GET
+│   └── [id]/
+│       └── copy/
+│           └── route.ts       # Copy template
+└── runs/
+    └── [id]/
+        └── route.ts           # GET run details
+```
+
+### Route Responsibilities
+- **Resource Routes**: Handle CRUD operations for resources
+- **Action Routes**: Handle specific actions on resources
+- **Nested Routes**: Handle sub-resources and relationships
+- **Utility Routes**: Handle system operations (health, status)
+
+## Data Layer Structure
+
+### Database Schema
+```
+prisma/
+├── schema.prisma              # Main schema file
+├── migrations/                 # Database migrations
+└── seed.ts                    # Seed data
+
+src/
+├── lib/
+│   ├── prisma.ts              # Prisma client configuration
+│   ├── types.ts               # Database type definitions
+│   └── validators.ts          # Data validation schemas
+└── services/
+    └── database/               # Database service layer
+        ├── user.service.ts
+        ├── wallet.service.ts
+        ├── hook.service.ts
+        └── run.service.ts
+```
+
+### Data Access Patterns
+- Use Prisma for all database operations
+- Implement service layer for business logic
+- Use proper transaction handling
+- Implement data validation at service layer
+
+## Configuration Structure
+
+### Environment Configuration
+```
+src/
+├── config/
+│   ├── database.ts            # Database configuration
+│   ├── auth.ts                # Authentication configuration
+│   ├── external.ts             # External service configuration
+│   └── app.ts                 # Application configuration
+└── lib/
+    ├── env.ts                 # Environment variable validation
+    └── constants.ts            # Application constants
+```
+
+### Configuration Management
+- Use environment variables for all configuration
+- Implement proper validation for configuration values
+- Use TypeScript for configuration types
+- Implement configuration validation at startup
+
+## Testing Structure
+
+### Test Organization
+```
+src/
+├── __tests__/
+│   ├── components/            # Component tests
+│   ├── services/              # Service tests
+│   ├── api/                   # API route tests
+│   └── utils/                 # Utility tests
+├── test/
+│   ├── fixtures/              # Test data fixtures
+│   ├── mocks/                 # Mock implementations
+│   └── helpers/               # Test helper functions
+└── e2e/                       # End-to-end tests
+    ├── auth.spec.ts
+    ├── hooks.spec.ts
+    └── wallets.spec.ts
+```
+
+### Testing Patterns
+- Use descriptive test names
+- Group related tests in describe blocks
+- Use proper test data fixtures
+- Implement proper test cleanup
+
+## Documentation Structure
+
+### Documentation Organization
+```
+docs/
+├── api/                       # API documentation
+│   ├── authentication.md
+│   ├── hooks.md
+│   └── wallets.md
+├── architecture/              # Architecture documentation
+│   ├── overview.md
+│   ├── database.md
+│   └── security.md
+├── development/              # Development guides
+│   ├── setup.md
+│   ├── testing.md
+│   └── deployment.md
+└── user/                     # User documentation
+    ├── getting-started.md
+    └── tutorials.md
+```
+
+### Documentation Standards
+- Use Markdown for all documentation
+- Include code examples where helpful
+- Keep documentation up-to-date
+- Use consistent formatting and structure
+
+## Import/Export Structure
+
+### Import Organization
+```typescript
+// External libraries
+import React from 'react';
+import { NextRequest, NextResponse } from 'next/server';
+
+// Internal modules
+import { authService } from '@/services/auth/auth.service';
+import { validateInput } from '@/lib/validators';
+
+// Types
+import type { User, Hook, HookRun } from '@/lib/types';
+
+// Constants
+import { API_ENDPOINTS } from '@/lib/constants';
+```
+
+### Export Patterns
+- Use named exports for most cases
+- Use default exports for main components
+- Export types and interfaces separately
+- Use barrel exports (index.ts) for clean imports
+
+## Error Handling Structure
+
+### Error Organization
+```
+src/
+├── lib/
+│   ├── errors/                # Custom error classes
+│   │   ├── AppError.ts
+│   │   ├── ValidationError.ts
+│   │   └── ExternalServiceError.ts
+│   └── error-handler.ts       # Error handling utilities
+└── middleware/
+    └── error-handler.ts       # Error handling middleware
+```
+
+### Error Handling Patterns
+- Use custom error classes for different error types
+- Implement proper error logging
+- Use consistent error response formats
+- Handle errors at appropriate levels

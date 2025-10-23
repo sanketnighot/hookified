@@ -1,0 +1,208 @@
+---
+alwaysApply: true
+description: Hookified-specific rules based on PRD requirements for blockchain automation platform
+---
+
+# Hookified Project Rules
+
+## Project Overview
+Hookified is a decentralized automation platform that connects blockchain events to onchain and offchain actions. This project implements "Zapier for blockchain" functionality with emphasis on extensibility, reliability, and auditable runs.
+
+## Architecture Principles
+
+### Modular Design
+- Separate concerns into distinct layers: Frontend, Backend API, Trigger Engine, Action Runner
+- Use clear interfaces between components
+- Implement proper abstraction layers
+- Maintain loose coupling between modules
+
+### Data Flow
+- User (UI) → Backend API → Database (Prisma + Supabase)
+- Trigger Engine ← Database → Blockscout SDK → Action Integrations
+- All operations must be auditable with HookRun records
+
+## Database Schema Requirements
+
+### Core Entities
+- **User**: id, email, createdAt
+- **Wallet**: id, userId, address, label, encryptedKeyRef, litAcl, createdAt
+- **Hook**: id, userId, name, triggerType, triggerConfig, actionConfig, isActive, createdAt
+- **HookRun**: id, hookId, status, triggeredAt, completedAt, meta
+- **Template**: id, name, description, triggerConfig, actionConfig, createdAt
+
+### Data Validation
+- All JSON fields (triggerConfig, actionConfig, meta) must be validated
+- Use TypeScript interfaces for configuration schemas
+- Implement proper data migration strategies
+- Maintain data integrity constraints
+
+## Authentication & Authorization
+
+### Supabase Integration
+- Use Supabase Auth for all authentication
+- Implement proper session management
+- Validate user identity on all protected routes
+- Implement resource ownership checks
+
+### Wallet Management
+- Never store private keys in plaintext
+- Use Lit Protocol for key encryption
+- Store only encryptedKeyRef and litAcl metadata
+- Implement proper access control policies
+
+## Hook System
+
+### Trigger Types
+- **ONCHAIN**: Monitor contract events and token transfers
+- **CRON**: Schedule-based triggers with cron expressions
+- **MANUAL**: User-initiated triggers (future)
+- **WEBHOOK**: External webhook triggers (future)
+
+### Action Types
+- **TELEGRAM**: Send notifications via Telegram bot
+- **WEBHOOK**: POST to external endpoints (future)
+- **CHAIN**: Trigger another hook (future)
+- **CONTRACT_CALL**: Execute smart contract calls (future)
+
+### Hook Configuration
+- Use structured JSON for triggerConfig and actionConfig
+- Implement proper validation for each trigger/action type
+- Support template-based hook creation
+- Maintain backward compatibility for configuration changes
+
+## Trigger Engine
+
+### Onchain Monitoring
+- Use Blockscout SDK for event monitoring
+- Implement proper block tracking with lastProcessedBlock
+- Handle event deduplication
+- Implement retry mechanisms for failed requests
+
+### Cron Scheduling
+- Use Supabase scheduled jobs or internal scheduler
+- Implement proper timezone handling
+- Support both cron expressions and intervals
+- Handle missed executions gracefully
+
+### Execution Flow
+1. Evaluate trigger conditions
+2. Create HookRun with PENDING status
+3. Execute action via Action Runner
+4. Update HookRun with SUCCESS/FAILED status
+5. Record metadata and provider responses
+
+## Action Runner
+
+### Telegram Integration
+- Implement proper bot token management
+- Support message templating with placeholders
+- Handle rate limiting and retries
+- Record delivery status and responses
+
+### Error Handling
+- Implement exponential backoff for retries
+- Log all action attempts and failures
+- Provide meaningful error messages
+- Handle provider-specific errors
+
+## API Design
+
+### Endpoint Structure
+- Use RESTful API design principles
+- Implement proper HTTP status codes
+- Use consistent error response format
+- Support pagination for list endpoints
+
+### Required Endpoints
+- Authentication: `/api/auth/sign-up`, `/api/auth/sign-in`
+- Wallets: `/api/wallets` (GET, POST)
+- Hooks: `/api/hooks` (GET, POST, PATCH), `/api/hooks/:id/run`
+- Templates: `/api/templates` (GET), `/api/templates/:id/copy`
+- Runs: `/api/runs/:id` (GET)
+- Health: `/api/health`
+
+### Request/Response Format
+- Use TypeScript interfaces for all API contracts
+- Implement proper input validation
+- Return structured error responses
+- Include proper CORS headers
+
+## Security Requirements
+
+### Private Key Security
+- Use Lit Protocol for all private key operations
+- Never expose private keys to server-side code
+- Implement proper access control policies
+- Use secure key generation methods
+
+### Input Validation
+- Validate all user inputs on both client and server
+- Sanitize data before processing
+- Implement proper CSRF protection
+- Use secure headers and CORS policies
+
+### Secrets Management
+- Store secrets in environment variables
+- Use proper secret rotation policies
+- Implement secure API key management
+- Never log sensitive information
+
+## Performance & Reliability
+
+### Idempotency
+- All operations must be idempotent
+- Use unique HookRun IDs for tracking
+- Implement proper deduplication
+- Handle retries safely
+
+### Monitoring
+- Implement health checks for all services
+- Log all operations with correlation IDs
+- Monitor success/failure rates
+- Implement proper alerting
+
+### Scalability
+- Use efficient database queries
+- Implement proper caching strategies
+- Use connection pooling
+- Handle high-volume event processing
+
+## Testing Requirements
+
+### Unit Testing
+- Test all business logic functions
+- Mock external dependencies
+- Test error scenarios
+- Use proper test data fixtures
+
+### Integration Testing
+- Test API endpoints end-to-end
+- Test database operations
+- Test external service integrations
+- Use test databases and mock services
+
+### End-to-End Testing
+- Test complete hook execution flows
+- Test authentication and authorization
+- Test error handling and recovery
+- Test performance under load
+
+## Deployment & Operations
+
+### Environment Configuration
+- Use separate environments for dev/staging/production
+- Implement proper environment variable management
+- Use Supabase for database and auth
+- Deploy to Vercel or similar platform
+
+### Monitoring
+- Implement proper logging and monitoring
+- Use structured logs with correlation IDs
+- Monitor key metrics and alerts
+- Implement proper error tracking
+
+### Maintenance
+- Implement proper backup strategies
+- Use database migrations for schema changes
+- Implement proper rollback procedures
+- Maintain proper documentation

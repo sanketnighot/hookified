@@ -1,0 +1,121 @@
+---
+alwaysApply: true
+description: Clean code principles and best practices for maintainable, readable code
+---
+
+# Clean Code Rules
+
+## General Principles
+
+### KISS (Keep It Simple, Stupid)
+- Write simple, straightforward code that is easy to understand
+- Avoid unnecessary complexity and over-engineering
+- Prefer explicit over implicit behavior
+- Use clear, descriptive names instead of clever tricks
+
+### DRY (Don't Repeat Yourself)
+- Extract common logic into reusable functions, components, or utilities
+- Create shared constants for repeated values
+- Use composition over duplication
+- Implement proper abstraction layers
+
+### Single Responsibility Principle (SRP)
+- Each function, class, or component should have one clear purpose
+- Functions should do one thing and do it well
+- Components should handle one specific UI concern
+- Services should manage one domain of business logic
+
+## Naming Conventions
+
+### Variables and Functions
+- Use descriptive, self-explanatory names
+- Prefer `calculateTotalPrice()` over `calc()`
+- Use verbs for functions: `getUserData()`, `validateInput()`, `processPayment()`
+- Use nouns for variables: `userEmail`, `paymentAmount`, `errorMessage`
+- Avoid abbreviations unless they're widely understood
+- Use camelCase for JavaScript/TypeScript
+
+### Constants
+- Use UPPER_SNAKE_CASE for constants
+- Be descriptive: `MAX_RETRY_ATTEMPTS`, `DEFAULT_TIMEOUT_MS`
+- Group related constants in objects or enums
+
+### Files and Directories
+- Use kebab-case for file and directory names
+- Be descriptive: `user-profile.tsx`, `payment-service.ts`
+- Group related files in logical directories
+
+## Function Design
+
+### Function Size
+- Keep functions small and focused (ideally under 20 lines)
+- One function should do one thing
+- Extract complex logic into separate functions
+- Use early returns to reduce nesting
+
+### Parameters
+- Limit function parameters (ideally fewer than 4)
+- Use objects for multiple related parameters
+- Provide default values when appropriate
+- Use TypeScript interfaces for complex parameter objects
+
+### Return Values
+- Be consistent with return types
+- Use meaningful return values
+- Prefer returning objects over multiple values
+- Handle errors explicitly
+
+## Code Organization
+
+### Imports
+- Group imports logically: external libraries, internal modules, types
+- Use absolute imports for internal modules
+- Sort imports alphabetically within groups
+- Remove unused imports
+
+### Comments
+- Write self-documenting code instead of comments
+- Use comments to explain "why" not "what"
+- Keep comments concise and up-to-date
+- Document complex business logic and algorithms
+
+### Error Handling
+- Handle errors explicitly and gracefully
+- Use try-catch blocks appropriately
+- Provide meaningful error messages
+- Log errors for debugging purposes
+- Don't ignore errors silently
+
+## Performance Considerations
+
+### Efficiency
+- Use efficient algorithms and data structures
+- Avoid unnecessary computations
+- Cache expensive operations when appropriate
+- Optimize critical paths
+
+### Memory Management
+- Avoid memory leaks
+- Clean up resources properly
+- Use appropriate data structures for the use case
+- Be mindful of object creation in loops
+
+## Code Quality
+
+### Readability
+- Use consistent formatting and indentation
+- Break long lines appropriately
+- Use meaningful whitespace
+- Follow established patterns
+
+### Maintainability
+- Write code that's easy to modify and extend
+- Use proper abstraction levels
+- Avoid tight coupling between components
+- Make dependencies explicit
+
+### Testability
+- Write pure functions when possible
+- Avoid side effects in business logic
+- Make functions easy to test in isolation
+- Use dependency injection for external dependencies

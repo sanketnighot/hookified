@@ -1,0 +1,150 @@
+---
+globs: *.tsx,*.jsx,*.ts,*.js
+description: React and Next.js frontend development rules and best practices
+---
+
+# React/Next.js Frontend Rules
+
+## Component Design
+
+### Functional Components
+- Always use functional components with hooks instead of class components
+- Use TypeScript for all component props and state
+- Define clear prop interfaces with proper typing
+- Use default props when appropriate
+
+### Component Structure
+- Keep components small and focused on a single responsibility
+- Extract complex logic into custom hooks
+- Use composition over inheritance
+- Prefer presentational components over container components
+
+### Props and State
+- Use descriptive prop names that clearly indicate their purpose
+- Destructure props at the component level for clarity
+- Use TypeScript interfaces for prop definitions
+- Minimize prop drilling by using context or state management
+
+## Hooks Usage
+
+### Built-in Hooks
+- Use `useState` for local component state
+- Use `useEffect` for side effects and lifecycle management
+- Use `useCallback` and `useMemo` for performance optimization
+- Use `useRef` for DOM references and mutable values
+
+### Custom Hooks
+- Extract reusable logic into custom hooks
+- Prefix custom hooks with "use"
+- Return objects instead of arrays for better readability
+- Keep hooks focused on a single concern
+
+### Hook Rules
+- Only call hooks at the top level of components or custom hooks
+- Don't call hooks inside loops, conditions, or nested functions
+- Use dependency arrays correctly in `useEffect`
+
+## State Management
+
+### Local State
+- Use `useState` for component-specific state
+- Use `useReducer` for complex state logic
+- Keep state as close to where it's used as possible
+- Avoid unnecessary state updates
+
+### Global State
+- Use React Context for app-wide state
+- Consider state management libraries (Zustand, Redux) for complex applications
+- Keep global state minimal and focused
+- Use selectors to prevent unnecessary re-renders
+
+## Performance Optimization
+
+### Rendering Optimization
+- Use `React.memo` for expensive components
+- Implement `useCallback` and `useMemo` judiciously
+- Avoid creating objects and functions in render
+- Use proper dependency arrays
+
+### Bundle Optimization
+- Use dynamic imports for code splitting
+- Implement lazy loading for routes and components
+- Optimize images with Next.js Image component
+- Use proper tree shaking
+
+## Next.js Specific
+
+### App Router (App Directory)
+- Use the new App Router for new projects
+- Implement proper loading and error boundaries
+- Use Server Components when possible
+- Use Client Components only when necessary
+
+### Routing
+- Use Next.js built-in routing system
+- Implement proper route protection
+- Use dynamic routes appropriately
+- Handle route parameters with proper validation
+
+### Data Fetching
+- Use Server Components for initial data fetching
+- Implement proper loading states
+- Use SWR or React Query for client-side data fetching
+- Handle errors gracefully
+
+## Styling and UI
+
+### CSS and Styling
+- Use CSS Modules or styled-components for component styling
+- Implement responsive design with mobile-first approach
+- Use CSS-in-JS solutions consistently
+- Follow design system patterns
+
+### Accessibility
+- Implement proper ARIA attributes
+- Use semantic HTML elements
+- Ensure keyboard navigation works
+- Test with screen readers
+- Maintain proper color contrast
+
+## Error Handling
+
+### Error Boundaries
+- Implement error boundaries for component error handling
+- Use proper error logging and reporting
+- Provide fallback UI for error states
+- Handle async errors properly
+
+### Form Handling
+- Use controlled components for form inputs
+- Implement proper validation
+- Provide clear error messages
+- Handle form submission states
+
+## Security
+
+### Input Validation
+- Validate all user inputs on the client side
+- Sanitize data before rendering
+- Use proper escaping for dynamic content
+- Implement CSRF protection
+
+### XSS Prevention
+- Use React's built-in XSS protection
+- Avoid `dangerouslySetInnerHTML` unless necessary
+- Validate and sanitize external data
+- Use proper encoding for URLs
+
+## Testing
+
+### Component Testing
+- Write unit tests for components
+- Test user interactions and state changes
+- Mock external dependencies
+- Use React Testing Library for component tests
+
+### Integration Testing
+- Test component integration
+- Test routing and navigation
+- Test API integration
+- Use proper test data and fixtures

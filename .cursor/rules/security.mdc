@@ -1,0 +1,215 @@
+---
+alwaysApply: true
+description: Security best practices for authentication, input validation, secrets management, and data protection
+---
+
+# Security Rules
+
+## Authentication & Authorization
+
+### User Authentication
+- Use Supabase Auth for all user authentication
+- Implement proper session management
+- Validate sessions on every protected route
+- Use secure cookie settings (httpOnly, secure, sameSite)
+- Implement proper logout functionality
+
+### Authorization
+- Implement role-based access control (RBAC)
+- Validate user permissions for all resources
+- Check resource ownership before operations
+- Use middleware for authorization checks
+- Implement principle of least privilege
+
+### Session Security
+- Use secure session tokens
+- Implement proper token refresh logic
+- Handle expired sessions gracefully
+- Implement session invalidation on logout
+- Use CSRF protection tokens
+
+## Input Validation & Sanitization
+
+### Client-Side Validation
+- Validate all user inputs on the client side
+- Use proper input types and constraints
+- Implement real-time validation feedback
+- Sanitize inputs before processing
+- Use proper encoding for special characters
+
+### Server-Side Validation
+- Always validate inputs on the server side
+- Use validation libraries (Zod, Joi, Yup)
+- Implement custom validation rules
+- Validate data types, formats, and ranges
+- Reject invalid inputs with clear error messages
+
+### SQL Injection Prevention
+- Use parameterized queries with Prisma
+- Never concatenate user input into SQL queries
+- Use proper ORM methods for database operations
+- Validate and sanitize all database inputs
+- Implement proper database access controls
+
+## Secrets Management
+
+### Environment Variables
+- Store all secrets in environment variables
+- Never commit secrets to version control
+- Use different environments for different stages
+- Implement proper secret rotation
+- Use secure secret management services
+
+### API Keys & Tokens
+- Store API keys securely
+- Use proper key rotation policies
+- Implement rate limiting for API usage
+- Monitor API key usage
+- Revoke compromised keys immediately
+
+### Database Credentials
+- Use connection strings with proper permissions
+- Implement database access controls
+- Use read-only connections when possible
+- Monitor database access patterns
+- Implement proper backup encryption
+
+## Data Protection
+
+### Encryption
+- Use HTTPS for all communications
+- Encrypt sensitive data at rest
+- Use proper encryption algorithms
+- Implement proper key management
+- Use Lit Protocol for private key encryption
+
+### Personal Data
+- Implement data minimization principles
+- Use proper data retention policies
+- Implement data anonymization when possible
+- Follow GDPR and privacy regulations
+- Provide data deletion capabilities
+
+### Wallet Security
+- Never store private keys in plaintext
+- Use Lit Protocol for key encryption
+- Implement proper access control policies
+- Use secure key generation methods
+- Implement proper key recovery mechanisms
+
+## XSS Prevention
+
+### React Security
+- Use React's built-in XSS protection
+- Avoid `dangerouslySetInnerHTML` unless necessary
+- Sanitize all dynamic content
+- Use proper encoding for user-generated content
+- Implement Content Security Policy (CSP)
+
+### URL Validation
+- Validate all URLs before use
+- Use secure URL validation functions
+- Prevent open redirect vulnerabilities
+- Implement proper URL encoding
+- Use HTTPS-only URLs when possible
+
+### Template Security
+- Sanitize template variables
+- Use proper escaping for dynamic content
+- Validate template syntax
+- Implement safe template rendering
+- Prevent template injection attacks
+
+## API Security
+
+### Rate Limiting
+- Implement rate limiting for all API endpoints
+- Use different limits for different user types
+- Implement proper throttling mechanisms
+- Monitor and log rate limit violations
+- Provide clear rate limit headers
+
+### CORS Configuration
+- Configure CORS properly
+- Use specific origins instead of wildcards
+- Implement proper preflight handling
+- Use secure CORS policies
+- Monitor CORS violations
+
+### Request Validation
+- Validate all request headers
+- Implement proper content-type validation
+- Check request size limits
+- Validate request signatures
+- Implement proper request logging
+
+## Error Handling Security
+
+### Error Information
+- Don't expose sensitive information in errors
+- Use generic error messages for users
+- Log detailed errors server-side only
+- Implement proper error monitoring
+- Use structured error responses
+
+### Logging Security
+- Never log sensitive data (passwords, keys, tokens)
+- Implement proper log sanitization
+- Use secure logging practices
+- Monitor log access and retention
+- Implement log integrity checks
+
+## File Upload Security
+
+### File Validation
+- Validate file types and sizes
+- Scan uploaded files for malware
+- Implement proper file storage
+- Use secure file serving mechanisms
+- Implement file access controls
+
+### File Processing
+- Process files in secure environments
+- Implement proper file quarantine
+- Use virus scanning for uploads
+- Implement file content validation
+- Use secure file deletion
+
+## Blockchain Security
+
+### Private Key Management
+- Use Lit Protocol for key encryption
+- Implement proper access control policies
+- Never expose private keys to server
+- Use secure key generation methods
+- Implement proper key recovery
+
+### Transaction Security
+- Validate all transaction parameters
+- Implement proper nonce management
+- Use secure transaction signing
+- Implement transaction monitoring
+- Use proper gas estimation
+
+### Smart Contract Interaction
+- Validate contract addresses
+- Implement proper contract verification
+- Use secure contract interaction patterns
+- Monitor contract interactions
+- Implement proper error handling
+
+## Monitoring & Incident Response
+
+### Security Monitoring
+- Implement security event logging
+- Monitor for suspicious activities
+- Use proper alerting mechanisms
+- Implement security dashboards
+- Monitor authentication failures
+
+### Incident Response
+- Implement incident response procedures
+- Have proper escalation procedures
+- Implement security incident logging
+- Use proper communication channels
+- Implement post-incident reviews

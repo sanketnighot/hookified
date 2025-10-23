@@ -1,0 +1,173 @@
+---
+globs: src/app/api/**/*,src/lib/**/*,src/services/**/*
+description: Next.js backend development rules for API routes, middleware, and server-side logic
+---
+
+# Next.js Backend Rules
+
+## API Routes Structure
+
+### Route Organization
+- Use the App Router API structure (`src/app/api/`)
+- Group related endpoints in folders
+- Use descriptive route names that reflect functionality
+- Implement proper HTTP methods (GET, POST, PUT, PATCH, DELETE)
+
+### Request/Response Handling
+- Use TypeScript for all API route handlers
+- Define clear request and response types
+- Implement proper error handling with consistent error responses
+- Use proper HTTP status codes
+
+### API Route Pattern
+```typescript
+// Example API route structure
+export async function GET(request: Request) {
+  try {
+    // Authentication check
+    // Input validation
+    // Business logic
+    // Response
+  } catch (error) {
+    // Error handling
+  }
+}
+```
+
+## Authentication & Authorization
+
+### Supabase Integration
+- Use Supabase Auth for user authentication
+- Implement proper session validation
+- Use middleware for route protection
+- Handle authentication errors consistently
+
+### Session Management
+- Validate sessions on every protected route
+- Implement proper token refresh logic
+- Handle expired sessions gracefully
+- Use secure cookie settings
+
+### Authorization
+- Implement role-based access control
+- Validate user permissions for resources
+- Use middleware for authorization checks
+- Implement resource ownership validation
+
+## Database Integration
+
+### Prisma Usage
+- Use Prisma as the ORM for database operations
+- Define clear database schemas
+- Use transactions for multi-step operations
+- Implement proper error handling for database operations
+
+### Query Optimization
+- Use proper indexing strategies
+- Implement efficient queries
+- Use pagination for large datasets
+- Implement proper connection pooling
+
+### Data Validation
+- Validate all inputs before database operations
+- Use Prisma's built-in validation
+- Implement custom validation rules
+- Sanitize data before storage
+
+## Error Handling
+
+### Consistent Error Responses
+- Use standardized error response format
+- Include proper error codes and messages
+- Log errors for debugging
+- Don't expose sensitive information in errors
+
+### Error Types
+- Implement different error types (validation, authentication, business logic)
+- Use appropriate HTTP status codes
+- Provide meaningful error messages
+- Handle async errors properly
+
+## Middleware
+
+### Request Processing
+- Implement request logging middleware
+- Add CORS handling
+- Implement rate limiting
+- Add request validation middleware
+
+### Authentication Middleware
+- Create reusable authentication middleware
+- Implement route-specific auth checks
+- Handle different authentication methods
+- Provide clear error responses
+
+## Security
+
+### Input Validation
+- Validate all incoming data
+- Use proper validation libraries
+- Sanitize inputs before processing
+- Implement CSRF protection
+
+### Data Protection
+- Never log sensitive data
+- Use environment variables for secrets
+- Implement proper encryption for sensitive data
+- Use secure headers
+
+## Performance
+
+### Optimization
+- Implement proper caching strategies
+- Use database connection pooling
+- Optimize database queries
+- Implement request compression
+
+### Monitoring
+- Add performance monitoring
+- Implement health checks
+- Log important metrics
+- Monitor error rates
+
+## Service Layer
+
+### Business Logic
+- Separate business logic from API routes
+- Create service classes for complex operations
+- Implement proper dependency injection
+- Use interfaces for service contracts
+
+### External Integrations
+- Create adapters for external services
+- Implement proper error handling for external calls
+- Use retry mechanisms for transient failures
+- Implement circuit breaker patterns
+
+## Testing
+
+### Unit Testing
+- Write unit tests for business logic
+- Mock external dependencies
+- Test error scenarios
+- Use proper test data
+
+### Integration Testing
+- Test API endpoints end-to-end
+- Test database operations
+- Test authentication flows
+- Use test databases
+
+## Documentation
+
+### API Documentation
+- Document all API endpoints
+- Include request/response examples
+- Document error responses
+- Use OpenAPI/Swagger when appropriate
+
+### Code Documentation
+- Document complex business logic
+- Include JSDoc comments for functions
+- Document configuration options
+- Maintain up-to-date documentation
