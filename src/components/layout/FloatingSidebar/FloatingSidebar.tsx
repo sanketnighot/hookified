@@ -5,40 +5,47 @@ import { motion } from "framer-motion";
 import { Home, LayoutDashboard, Library, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import { FloatingSidebarProps, NavItem } from "./FloatingSidebar.types";
 
 const navItems: NavItem[] = [
   { id: "home", label: "Home", icon: Home, href: "/" },
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
   { id: "create", label: "Create Hook", icon: Plus, href: "/hook" },
   { id: "registry", label: "Registry", icon: Library, href: "/registry" },
 ];
 
 export function FloatingSidebar({ className }: FloatingSidebarProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const pathname = usePathname();
 
-  // Don't show sidebar on landing page
+  // Don't show dock on landing page
   if (pathname === "/") {
     return null;
   }
 
   return (
-    <motion.aside
-      initial={{ x: -20, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
+    <div
+      style={{
+        position: "fixed",
+        bottom: "24px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 9999,
+      }}
       className={cn(
-        "fixed left-6 top-1/2 -translate-y-1/2 z-50",
-        "glass-strong rounded-2xl p-3",
-        "holographic-border transition-all duration-300",
-        isExpanded ? "w-48" : "w-16",
+        "glass-strong rounded-2xl px-4 py-3",
+        "holographic-border backdrop-blur-xl",
+        "shadow-2xl border border-white/10",
+        "transform-gpu will-change-transform",
+        "bg-red-500/80", // Debug: Very visible background
         className
       )}
-      onHoverStart={() => setIsExpanded(true)}
-      onHoverEnd={() => setIsExpanded(false)}
     >
-      <nav className="flex flex-col gap-2">
+      <nav className="flex items-center gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -46,41 +53,39 @@ export function FloatingSidebar({ className }: FloatingSidebarProps) {
           return (
             <Link key={item.id} href={item.href}>
               <motion.div
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-xl",
+                  "flex flex-col items-center gap-1 px-4 py-3 rounded-xl",
                   "transition-all duration-200 cursor-pointer",
-                  "relative overflow-hidden",
+                  "relative overflow-hidden min-w-[80px]",
                   isActive
-                    ? "aurora-gradient-1 text-white"
-                    : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                    ? "text-white"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                 )}
               >
-                <Icon className="w-5 h-5 shrink-0" />
-                <motion.span
-                  initial={false}
-                  animate={{
-                    opacity: isExpanded ? 1 : 0,
-                    width: isExpanded ? "auto" : 0,
-                  }}
-                  className="text-sm font-medium whitespace-nowrap overflow-hidden"
-                >
+                <div className="relative">
+                  <Icon className="w-5 h-5" />
+                  {isActive && (
+                    <motion.div
+                      layoutId="dockActiveIndicator"
+                      className="absolute -inset-2 aurora-gradient-1 rounded-lg -z-10"
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
+                      }}
+                    />
+                  )}
+                </div>
+                <span className="text-xs font-medium text-center leading-tight">
                   {item.label}
-                </motion.span>
-                {isActive && (
-                  <motion.div
-                    layoutId="activeIndicator"
-                    className="absolute inset-0 aurora-gradient-1 -z-10"
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  />
-                )}
+                </span>
               </motion.div>
             </Link>
           );
         })}
       </nav>
-    </motion.aside>
+    </div>
   );
 }
-

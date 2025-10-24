@@ -15,7 +15,7 @@ export function RegistryView() {
       initial="hidden"
       animate="visible"
       variants={slideUpVariants}
-      className="space-y-8"
+      className="space-y-8 max-w-full"
     >
       <div className="space-y-4">
         <div>

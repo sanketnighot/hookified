@@ -16,14 +16,12 @@ export function PageContainer({ children, className }: PageContainerProps) {
       animate="visible"
       variants={fadeInVariants}
       className={cn(
-        "min-h-screen pl-28 pr-8 py-8",
+        "min-h-screen px-8 py-8 pb-24",
         "bg-linear-to-br from-background via-background to-space-medium",
         className
       )}
     >
-      <div className="max-w-7xl mx-auto">
-        {children}
-      </div>
+      <div className="max-w-4xl mx-auto">{children}</div>
     </motion.div>
   );
 }

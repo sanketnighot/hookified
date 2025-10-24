@@ -16,7 +16,7 @@ export function DashboardHeader() {
       initial="hidden"
       animate="visible"
       variants={slideUpVariants}
-      className="mb-8"
+      className="mb-8 max-w-full"
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>

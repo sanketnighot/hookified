@@ -36,7 +36,7 @@ export function DashboardGrid() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-full">
       <motion.div
         initial="hidden"
         animate="visible"
