@@ -40,6 +40,36 @@ export interface ActionConfig {
   parameters?: any[];
 }
 
+// Block-based builder types
+export interface ActionBlock {
+  id: string;
+  order: number;
+  type: ActionType;
+  config: ActionConfig;
+  isExpanded: boolean;
+  isValid: boolean;
+  errors?: string[];
+  customName?: string; // Optional custom name for the action
+  defaultName?: string; // Static default name that doesn't change with reordering
+}
+
+export interface HookBuilderState {
+  name: string;
+  description?: string;
+  triggerType: TriggerType;
+  triggerConfig: TriggerConfig;
+  actions: ActionBlock[];
+  isValid?: boolean;
+  errors?: string[];
+  warnings?: string[];
+}
+
+export interface BlockValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
 export interface Hook {
   id: string;
   userId: string;
@@ -47,7 +77,8 @@ export interface Hook {
   description?: string;
   triggerType: TriggerType;
   triggerConfig: TriggerConfig;
-  actionConfig: ActionConfig;
+  actionConfig: ActionConfig; // Keep for backward compatibility
+  actions: ActionBlock[]; // New multi-action support
   status: HookStatus;
   isActive: boolean;
   createdAt: Date;
