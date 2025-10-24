@@ -2,8 +2,40 @@
 export interface User {
   id: string;
   email: string;
-  name: string;
+  name: string | null;
+  avatarUrl: string | null;
+  supabaseId: string;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+// Auth types
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+  createdAt: Date;
+}
+
+export interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+  user: AuthUser;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  user?: AuthUser;
+  message?: string;
+  error?: string;
+}
+
+export interface ErrorResponse {
+  error: string;
+  details?: any;
 }
 
 export type TriggerType = "ONCHAIN" | "CRON" | "MANUAL" | "WEBHOOK";

@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String?
+  avatarUrl  String?
+  supabaseId String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  hooks   Hook[]
+  wallets Wallet[]
+
+  @@map("users")
+}
+
+model Wallet {
+  id             String   @id @default(cuid())
+  userId         String
+  address        String
+  label          String?
+  encryptedKeyRef String?
+  litAcl         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+model Hook {
+  id            String       @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+  triggerType   TriggerType
+  triggerConfig Json
+  actionConfig  Json
+  actions       Json?        // For multi-action support
+  status        HookStatus   @default(ACTIVE)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  lastExecutedAt DateTime?
+
+  // Relations
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs HookRun[]
+
+  @@map("hooks")
+}
+
+model HookRun {
+  id          String     @id @default(cuid())
+  hookId      String
+  status      RunStatus  @default(PENDING)
+  triggeredAt DateTime   @default(now())
+  completedAt DateTime?
+  error       String?
+  meta        Json?
+
+  // Relations
+  hook Hook @relation(fields: [hookId], references: [id], onDelete: Cascade)
+
+  @@map("hook_runs")
+}
+
+model Template {
+  id            String       @id @default(cuid())
+  name          String
+  description   String
+  category      String
+  triggerConfig Json
+  actionConfig  Json
+  popularity    Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("templates")
+}
+
+enum TriggerType {
+  ONCHAIN
+  CRON
+  MANUAL
+  WEBHOOK
+}
+
+enum ActionType {
+  TELEGRAM
+  WEBHOOK
+  CHAIN
+  CONTRACT_CALL
+}
+
+enum HookStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}
+
+enum RunStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}

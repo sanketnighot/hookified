@@ -1,5 +1,6 @@
 import { FloatingSidebar } from "@/components/layout/FloatingSidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/providers/AuthProvider";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -29,9 +30,11 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <FloatingSidebar />
-        {children}
-        <Toaster />
+        <AuthProvider>
+          <FloatingSidebar />
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
