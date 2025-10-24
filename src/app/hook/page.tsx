@@ -1,10 +1,10 @@
-import { HookWizard } from "@/components/hook-builder/HookWizard";
+import { BlockBasedBuilder } from "@/components/hook-builder/BlockBasedBuilder";
 import { PageContainer } from "@/components/layout/PageContainer";
 
 export default function CreateHookPage() {
   return (
     <PageContainer>
-      <HookWizard />
+      <BlockBasedBuilder />
     </PageContainer>
   );
 }
