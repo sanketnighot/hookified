@@ -1,11 +1,16 @@
 import { ActionDefinition, FormSchema, ValidationResult } from '../types';
 
 export interface ContractCallConfig {
-  type: 'CONTRACT_CALL';
+  type: "CONTRACT_CALL";
   contractAddress?: string;
   functionName?: string;
-  parameters?: string; // JSON string for UI
+  parameters?: any[]; // Changed from string to any[] for better type safety
   chainId?: number;
+  isNativeTransfer?: boolean;
+  abi?: any[];
+  abiSignature?: string;
+  tokenDecimals?: number;
+  tokenSymbol?: string;
 }
 
 export class ContractCallAction implements ActionDefinition<ContractCallConfig> {
@@ -23,12 +28,20 @@ export class ContractCallAction implements ActionDefinition<ContractCallConfig> 
       errors.push('Invalid contract address format');
     }
 
-    if (!config.functionName) {
-      errors.push('Function name is required');
+    if (!config.chainId) {
+      errors.push("Chain ID is required");
     }
 
-    if (!config.chainId) {
-      errors.push('Chain ID is required');
+    if (config.isNativeTransfer) {
+      // For native transfers, we need recipient and amount
+      if (!config.parameters || config.parameters.length < 2) {
+        errors.push("Native transfer requires recipient address and amount");
+      }
+    } else {
+      // For contract calls, we need function name
+      if (!config.functionName) {
+        errors.push("Function name is required for contract calls");
+      }
     }
 
     return { isValid: errors.length === 0, errors };

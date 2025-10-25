@@ -45,6 +45,11 @@ export interface AppConfig {
   cron: {
     secret: string;
   };
+
+  // Block Explorer APIs (single API key for all Etherscan-compatible explorers)
+  etherscan: {
+    apiKey: string;
+  };
 }
 
 /**
@@ -108,11 +113,48 @@ function loadConfig(): AppConfig {
     cron: {
       secret: requiredVars.CRON_SECRET || "default-cron-secret",
     },
+    etherscan: {
+      apiKey: process.env.ETHERSCAN_API_KEY || "",
+    },
   };
 }
 
 // Export the loaded configuration
 export const config = loadConfig();
+
+// Helper functions for configuration checks
+export function isEtherscanConfigured(): boolean {
+  return !!config.etherscan.apiKey;
+}
+
+export function getEtherscanConfig() {
+  return config.etherscan;
+}
+
+// Legacy functions for backward compatibility - all use the same API key
+export function isBscscanConfigured(): boolean {
+  return !!config.etherscan.apiKey;
+}
+
+export function isPolygonscanConfigured(): boolean {
+  return !!config.etherscan.apiKey;
+}
+
+export function isBasescanConfigured(): boolean {
+  return !!config.etherscan.apiKey;
+}
+
+export function getBscscanConfig() {
+  return config.etherscan;
+}
+
+export function getPolygonscanConfig() {
+  return config.etherscan;
+}
+
+export function getBasescanConfig() {
+  return config.etherscan;
+}
 
 // Helper functions for accessing specific configurations
 export const getAlchemyConfig = () => config.alchemy;

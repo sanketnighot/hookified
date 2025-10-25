@@ -72,6 +72,13 @@ export interface ActionConfig {
   contractAddress?: string;
   functionName?: string;
   parameters?: any[];
+  // CONTRACT_CALL enhancements
+  abi?: any[]; // Store fetched ABI
+  abiSignature?: string; // Function signature for display
+  isNativeTransfer?: boolean; // True for native token transfers
+  tokenDecimals?: number; // For ERC-20 transfers
+  tokenSymbol?: string; // For ERC-20 transfers
+  chainId?: number;
 }
 
 // Block-based builder types
@@ -147,5 +154,62 @@ export interface AnalyticsData {
   totalRuns: number;
   successRate: number;
   recentActivity: HookRun[];
+}
+
+// Blockchain types
+export interface ChainInfo {
+  id: number;
+  name: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+  rpcUrls: string[];
+  blockExplorerUrls: string[];
+  testnet?: boolean;
+}
+
+export interface ContractInfo {
+  address: string;
+  name?: string;
+  isVerified: boolean;
+  compilerVersion?: string;
+  sourceCodeUrl?: string;
+}
+
+export interface FunctionDefinition {
+  name: string;
+  type: "function";
+  inputs: InputParameter[];
+  outputs?: InputParameter[];
+  stateMutability: "pure" | "view" | "nonpayable" | "payable";
+}
+
+export interface InputParameter {
+  name: string;
+  type: string;
+  internalType?: string;
+}
+
+export interface ParsedABI {
+  functions: FunctionDefinition[];
+  events: any[];
+  isERC20: boolean;
+  isERC721: boolean;
+}
+
+export interface ERC20Metadata {
+  name: string;
+  symbol: string;
+  decimals: number;
+  totalSupply?: string;
+}
+
+export interface NFTMetadata {
+  name: string;
+  description?: string;
+  image?: string;
+  attributes?: any[];
 }
 
