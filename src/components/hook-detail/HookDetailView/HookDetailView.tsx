@@ -8,6 +8,7 @@ import { ExecutionTimeline } from "../ExecutionTimeline";
 import { HookFlowVisualization } from "../HookFlowVisualization";
 import { HookHeader } from "../HookHeader";
 import { MetricsPanel } from "../MetricsPanel";
+import { WebhookInfo } from "../WebhookInfo";
 
 interface HookDetailViewProps {
   hook: Hook;
@@ -34,6 +35,9 @@ export function HookDetailView({ hook }: HookDetailViewProps) {
       <HookHeader hook={currentHook} onUpdate={handleHookUpdate} />
       <HookFlowVisualization hook={currentHook} />
       <MetricsPanel hook={currentHook} />
+      {currentHook.triggerType === "WEBHOOK" && (
+        <WebhookInfo hookId={currentHook.id} />
+      )}
       <ExecutionTimeline hookId={currentHook.id} />
     </motion.div>
   );

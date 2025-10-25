@@ -19,10 +19,19 @@ export function DynamicForm({
   actionType,
 }: DynamicFormProps) {
   const handleFieldChange = (fieldName: string, value: any) => {
-    onChange({
-      ...values,
-      [fieldName]: value,
-    });
+    // Special handling for cronExpression field - it returns an object with both cronExpression and timezone
+    if (fieldName === 'cronExpression' && typeof value === 'object' && value.cronExpression !== undefined) {
+      onChange({
+        ...values,
+        cronExpression: value.cronExpression,
+        timezone: value.timezone,
+      });
+    } else {
+      onChange({
+        ...values,
+        [fieldName]: value,
+      });
+    }
   };
 
   const getFieldError = (fieldName: string): string | undefined => {

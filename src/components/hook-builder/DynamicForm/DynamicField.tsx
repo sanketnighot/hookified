@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormField } from "@/lib/plugins/types";
 import { AlertCircle } from "lucide-react";
+import { CronScheduleField } from "./CronScheduleField";
 import { TelegramChatIdField } from "./TelegramChatIdField";
 
 interface DynamicFieldProps {
@@ -39,6 +40,28 @@ export function DynamicField({
         error={error}
         botName={botName}
       />
+    );
+  }
+
+  // Special handling for Cron schedule field
+  if (field.name === "cronExpression") {
+    return (
+      <CronScheduleField value={value} onChange={onChange} error={error} />
+    );
+  }
+
+  // Special handling for webhook info field
+  if (field.name === "info" && field.type === "text") {
+    return (
+      <div className="p-4 rounded-lg glass border border-white/10 bg-white/5">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+          <span className="text-sm font-medium text-blue-400">
+            Auto-Generated Configuration
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">{field.description}</p>
+      </div>
     );
   }
 

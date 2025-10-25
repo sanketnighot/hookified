@@ -1,11 +1,10 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { slideUpVariants, staggerContainerVariants } from "@/lib/animations";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, RefreshCw, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface HookRun {
@@ -38,27 +37,72 @@ interface ExecutionTimelineProps {
 export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
   const [runs, setRuns] = useState<HookRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
+
+  const fetchRuns = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      // Add timestamp to bypass cache
+      const timestamp = new Date().getTime();
+      const response = await fetch(
+        `/api/hooks/${hookId}/runs?limit=20&_t=${timestamp}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch runs");
+      }
+      const data = await response.json();
+      console.log("Fetched runs data:", data); // Debug log
+      console.log("Previous runs count:", runs.length); // Debug log
+      console.log("New runs count:", data.runs?.length || 0); // Debug log
+
+      // Force state update with a new array reference
+      const newRuns = data.runs || [];
+      console.log("Setting new runs:", newRuns.length, "items");
+      setRuns([...newRuns]); // Create new array reference
+    } catch (error) {
+      console.error("Failed to fetch runs:", error);
+      setRuns([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    console.log("Refresh button clicked"); // Debug log
+    const now = Date.now();
+    setLastRefreshTime(now);
+    setRefreshKey((prev) => prev + 1); // Force re-render
+
+    // Test the test endpoint first
+    fetch(`/api/test/runs?hookId=${hookId}&_t=${now}`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Test endpoint response:", data);
+      })
+      .catch((err) => {
+        console.error("Test endpoint error:", err);
+      });
+
+    fetchRuns(true);
+  };
 
   useEffect(() => {
-    const fetchRuns = async () => {
-      try {
-        const response = await fetch(`/api/hooks/${hookId}/runs?limit=20`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch runs");
-        }
-        const data = await response.json();
-        setRuns(data.runs || []);
-      } catch (error) {
-        console.error("Failed to fetch runs:", error);
-        setRuns([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRuns();
   }, [hookId]);
+
+  // Debug effect to monitor runs changes
+  useEffect(() => {
+    console.log("Runs state changed:", runs.length, "runs");
+  }, [runs]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -85,7 +129,21 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
   return (
     <Card className="glass neo-flat border-white/10">
       <CardHeader>
-        <CardTitle className="text-white">Execution History</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-white">Execution History</CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing || loading}
+            className="text-muted-foreground hover:text-white hover:bg-white/10"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            <span className="ml-2">Refresh</span>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -95,16 +153,10 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
             No executions yet
           </p>
         ) : (
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={staggerContainerVariants}
-            className="space-y-4"
-          >
+          <div key={`${refreshKey}-${lastRefreshTime}`} className="space-y-4">
             {runs.map((run) => (
-              <motion.div
+              <div
                 key={run.id}
-                variants={slideUpVariants}
                 className="rounded-lg glass hover:bg-white/5 transition-colors"
               >
                 <div
@@ -230,9 +282,9 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
                     </div>
                   </div>
                 )}
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         )}
       </CardContent>
     </Card>

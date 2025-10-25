@@ -38,6 +38,7 @@ import { AddBlockMenu } from "./AddBlockMenu";
 import { TemplateQuickStart } from "./TemplateQuickStart";
 import { TriggerBlock } from "./TriggerBlock";
 import { ValidationPanel } from "./ValidationPanel";
+import { WebhookSuccessModal } from "./WebhookSuccessModal";
 
 export function BlockBasedBuilder() {
   return (
@@ -79,6 +80,14 @@ function BlockBasedBuilderContent() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isLoadingEditHook, setIsLoadingEditHook] = useState(false);
   const lastOverId = useRef<string | null>(null);
+
+  // Webhook success modal state
+  const [showWebhookModal, setShowWebhookModal] = useState(false);
+  const [webhookDetails, setWebhookDetails] = useState<{
+    webhookUrl: string;
+    webhookSecret: string;
+    hookId: string;
+  } | null>(null);
 
   // Load hook data in edit mode
   useEffect(() => {
@@ -164,11 +173,14 @@ function BlockBasedBuilderContent() {
     }
 
     // Validate trigger configuration using registry
-    const triggerValidation = registry.validateTriggerConfig(
-      builderState.triggerType,
-      builderState.triggerConfig
-    );
-    errors.push(...triggerValidation.errors);
+    // Skip validation for WEBHOOK triggers during creation since secret is auto-generated
+    if (builderState.triggerType !== "WEBHOOK") {
+      const triggerValidation = registry.validateTriggerConfig(
+        builderState.triggerType,
+        builderState.triggerConfig
+      );
+      errors.push(...triggerValidation.errors);
+    }
 
     // Check actions
     if (builderState.actions.length === 0) {
@@ -401,14 +413,31 @@ function BlockBasedBuilderContent() {
         );
       }
 
-      toast.success(`Hook ${editHookId ? "updated" : "created"} successfully!`);
+      // Check if this is a webhook hook creation
+      if (
+        !editHookId &&
+        builderState.triggerType === "WEBHOOK" &&
+        data.webhookUrl &&
+        data.webhookSecret
+      ) {
+        setWebhookDetails({
+          webhookUrl: data.webhookUrl,
+          webhookSecret: data.webhookSecret,
+          hookId: data.hook.id,
+        });
+        setShowWebhookModal(true);
+      } else {
+        toast.success(
+          `Hook ${editHookId ? "updated" : "created"} successfully!`
+        );
 
-      // Clear draft if not editing
-      if (!editHookId) {
-        localStorage.removeItem("hook-builder-draft");
+        // Clear draft if not editing
+        if (!editHookId) {
+          localStorage.removeItem("hook-builder-draft");
+        }
+
+        router.push("/dashboard");
       }
-
-      router.push("/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Failed to save hook");
       console.error("Save error:", error);
@@ -588,6 +617,22 @@ function BlockBasedBuilderContent() {
         isOpen={isTemplateOpen}
         onClose={() => setIsTemplateOpen(false)}
       />
+
+      {/* Webhook Success Modal */}
+      {showWebhookModal && webhookDetails && (
+        <WebhookSuccessModal
+          webhookUrl={webhookDetails.webhookUrl}
+          webhookSecret={webhookDetails.webhookSecret}
+          hookId={webhookDetails.hookId}
+          onClose={() => {
+            setShowWebhookModal(false);
+            setWebhookDetails(null);
+            // Clear draft and navigate to dashboard
+            localStorage.removeItem("hook-builder-draft");
+            router.push("/dashboard");
+          }}
+        />
+      )}
     </div>
   );
 }

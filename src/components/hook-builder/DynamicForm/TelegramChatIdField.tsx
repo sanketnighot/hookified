@@ -46,7 +46,7 @@ export function TelegramChatIdField({
     };
 
     checkTelegramConnection();
-  }, [value, onChange]);
+  }, [value]);
 
   const handleAuthSuccess = (data: any) => {
     if (data.telegram?.chatId) {
