@@ -29,7 +29,6 @@ export function DynamicField({
   // Special handling for Telegram chatId field
   if (actionType === "TELEGRAM" && field.name === "chatId") {
     const botName = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
-    console.log("botName", botName);
     if (!botName) {
       throw new Error("NEXT_PUBLIC_TELEGRAM_BOT_USERNAME is not set");
     }
