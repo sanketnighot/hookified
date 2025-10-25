@@ -46,6 +46,11 @@ CONTRACT_RPC_URL="https://mainnet.infura.io/v3/your-project-id"
 WEBHOOK_SECRET="your-default-webhook-secret"
 ```
 
+### Cron Job Security
+```bash
+CRON_SECRET="your-cron-job-secret"
+```
+
 ## Environment Variable Details
 
 ### ALCHEMY_API_KEY
@@ -80,6 +85,12 @@ WEBHOOK_SECRET="your-default-webhook-secret"
 - **Purpose**: Secret for validating incoming webhook requests
 - **Required for**: WEBHOOK trigger type hooks (optional per-hook secret)
 - **Security**: Used for HMAC signature verification
+- **Format**: String (any secure random string)
+
+### CRON_SECRET
+- **Purpose**: Secret for securing cron job execution endpoints
+- **Required for**: CRON trigger type hooks
+- **Security**: Used to authenticate requests from Supabase Edge Functions
 - **Format**: String (any secure random string)
 
 ## Configuration Management
