@@ -8,9 +8,16 @@ interface DynamicFormProps {
   values: any;
   onChange: (values: any) => void;
   errors?: string[];
+  actionType?: string;
 }
 
-export function DynamicForm({ schema, values, onChange, errors = [] }: DynamicFormProps) {
+export function DynamicForm({
+  schema,
+  values,
+  onChange,
+  errors = [],
+  actionType,
+}: DynamicFormProps) {
   const handleFieldChange = (fieldName: string, value: any) => {
     onChange({
       ...values,
@@ -19,7 +26,9 @@ export function DynamicForm({ schema, values, onChange, errors = [] }: DynamicFo
   };
 
   const getFieldError = (fieldName: string): string | undefined => {
-    return errors.find(error => error.toLowerCase().includes(fieldName.toLowerCase()));
+    return errors.find((error) =>
+      error.toLowerCase().includes(fieldName.toLowerCase())
+    );
   };
 
   if (schema.fields.length === 0) {
@@ -39,6 +48,7 @@ export function DynamicForm({ schema, values, onChange, errors = [] }: DynamicFo
           value={values?.[field.name]}
           onChange={(value) => handleFieldChange(field.name, value)}
           error={getFieldError(field.name)}
+          actionType={actionType}
         />
       ))}
     </div>

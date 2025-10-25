@@ -1,10 +1,10 @@
 import { ActionDefinition, FormSchema, ValidationResult } from '../types';
 
 export interface TelegramConfig {
-  type: 'TELEGRAM';
-  botToken?: string;
+  type: "TELEGRAM";
   chatId?: string;
   messageTemplate?: string;
+  // botToken removed - will use environment variable
 }
 
 export class TelegramAction implements ActionDefinition<TelegramConfig> {
@@ -15,10 +15,6 @@ export class TelegramAction implements ActionDefinition<TelegramConfig> {
 
   validateConfig(config: TelegramConfig): ValidationResult {
     const errors: string[] = [];
-
-    if (!config.botToken) {
-      errors.push('Bot token is required');
-    }
 
     if (!config.chatId) {
       errors.push('Chat ID is required');
@@ -31,30 +27,23 @@ export class TelegramAction implements ActionDefinition<TelegramConfig> {
     return {
       fields: [
         {
-          name: 'botToken',
-          label: 'Bot Token',
-          type: 'password',
-          placeholder: '123456789:ABCdefGHIjklMNOpqrsTUVwxyz',
+          name: "chatId",
+          label: "Chat ID",
+          type: "text",
+          placeholder: "123456789 or @channelname",
           required: true,
-          description: 'Get this from @BotFather on Telegram'
+          description: "Your Telegram chat ID or channel username",
         },
         {
-          name: 'chatId',
-          label: 'Chat ID',
-          type: 'text',
-          placeholder: '123456789 or @channelname',
-          required: true,
-          description: 'Your Telegram chat ID or channel username'
-        },
-        {
-          name: 'messageTemplate',
-          label: 'Message Template',
-          type: 'textarea',
-          placeholder: '🚨 Alert: {eventName} detected!',
+          name: "messageTemplate",
+          label: "Message Template",
+          type: "textarea",
+          placeholder: "🚨 Alert: {eventName} detected!",
           required: false,
-          description: 'Use {variable} for dynamic values (e.g., {eventName}, {contractAddress})'
-        }
-      ]
+          description:
+            "Use {variable} for dynamic values (e.g., {eventName}, {contractAddress})",
+        },
+      ],
     };
   }
 }

@@ -12,7 +12,22 @@ interface HookRun {
   id: string;
   status: string;
   triggeredAt: Date | string;
-  meta?: any;
+  completedAt?: Date | string;
+  meta?: {
+    triggerContext?: any;
+    actions: Array<{
+      actionId: string;
+      actionType: string;
+      status: "SUCCESS" | "FAILED";
+      startedAt: string;
+      completedAt: string;
+      duration: number;
+      result?: any;
+      error?: string;
+    }>;
+    totalDuration: number;
+    failedAt?: number;
+  };
   error?: string;
 }
 
@@ -23,15 +38,20 @@ interface ExecutionTimelineProps {
 export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
   const [runs, setRuns] = useState<HookRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedRun, setExpandedRun] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchRuns = async () => {
       try {
-        // For now, runs will be empty since we don't have a runs API
-        // Once the hook execution engine is implemented, this will fetch real data
-        setRuns([]);
+        const response = await fetch(`/api/hooks/${hookId}/runs?limit=20`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch runs");
+        }
+        const data = await response.json();
+        setRuns(data.runs || []);
       } catch (error) {
         console.error("Failed to fetch runs:", error);
+        setRuns([]);
       } finally {
         setLoading(false);
       }
@@ -85,34 +105,131 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
               <motion.div
                 key={run.id}
                 variants={slideUpVariants}
-                className="flex items-start gap-4 p-4 rounded-lg glass hover:bg-white/5 transition-colors"
+                className="rounded-lg glass hover:bg-white/5 transition-colors"
               >
-                <div className="mt-1">{getStatusIcon(run.status)}</div>
+                <div
+                  className="flex items-start gap-4 p-4 cursor-pointer"
+                  onClick={() =>
+                    setExpandedRun(expandedRun === run.id ? null : run.id)
+                  }
+                >
+                  <div className="mt-1">{getStatusIcon(run.status)}</div>
 
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Badge
-                      className={cn("text-xs", getStatusColor(run.status))}
-                    >
-                      {run.status}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(run.triggeredAt).toLocaleString()}
-                    </span>
-                  </div>
-
-                  {run.meta && (
-                    <div className="text-sm text-muted-foreground">
-                      <pre className="font-mono text-xs">
-                        {JSON.stringify(run.meta, null, 2)}
-                      </pre>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={cn("text-xs", getStatusColor(run.status))}
+                        >
+                          {run.status}
+                        </Badge>
+                        {run.meta?.totalDuration && (
+                          <span className="text-xs text-muted-foreground">
+                            {(run.meta.totalDuration / 1000).toFixed(1)}s
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(run.triggeredAt).toLocaleString()}
+                      </span>
                     </div>
-                  )}
 
-                  {run.error && (
-                    <p className="text-sm text-red-400">{run.error}</p>
-                  )}
+                    {run.error && (
+                      <p className="text-sm text-red-400">{run.error}</p>
+                    )}
+
+                    {run.meta?.actions && run.meta.actions.length > 0 && (
+                      <div className="text-sm text-muted-foreground">
+                        {run.meta.actions.length} action
+                        {run.meta.actions.length !== 1 ? "s" : ""} executed
+                        {run.meta.failedAt !== undefined && (
+                          <span className="text-red-400 ml-2">
+                            (Failed at action {run.meta.failedAt + 1})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Expanded details */}
+                {expandedRun === run.id && run.meta && (
+                  <div className="px-4 pb-4 border-t border-white/10">
+                    <div className="mt-4 space-y-3">
+                      {/* Trigger context */}
+                      {run.meta.triggerContext && (
+                        <div>
+                          <h4 className="text-sm font-medium text-white mb-2">
+                            Trigger Context
+                          </h4>
+                          <pre className="text-xs text-muted-foreground bg-black/20 p-2 rounded overflow-x-auto">
+                            {JSON.stringify(run.meta.triggerContext, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+
+                      {/* Action details */}
+                      {run.meta.actions && run.meta.actions.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium text-white mb-2">
+                            Action Details
+                          </h4>
+                          <div className="space-y-2">
+                            {run.meta.actions.map((action, index) => (
+                              <div
+                                key={action.actionId}
+                                className={cn(
+                                  "p-3 rounded border",
+                                  action.status === "SUCCESS"
+                                    ? "bg-green-500/10 border-green-500/20"
+                                    : "bg-red-500/10 border-red-500/20"
+                                )}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-medium">
+                                    Action {index + 1}: {action.actionType}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <Badge
+                                      className={cn(
+                                        "text-xs",
+                                        action.status === "SUCCESS"
+                                          ? "bg-green-500/20 text-green-400"
+                                          : "bg-red-500/20 text-red-400"
+                                      )}
+                                    >
+                                      {action.status}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {(action.duration / 1000).toFixed(1)}s
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {action.error && (
+                                  <p className="text-xs text-red-400 mt-1">
+                                    {action.error}
+                                  </p>
+                                )}
+
+                                {action.result && (
+                                  <details className="mt-2">
+                                    <summary className="text-xs text-muted-foreground cursor-pointer">
+                                      View Result
+                                    </summary>
+                                    <pre className="text-xs text-muted-foreground bg-black/20 p-2 rounded mt-1 overflow-x-auto">
+                                      {JSON.stringify(action.result, null, 2)}
+                                    </pre>
+                                  </details>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ))}
           </motion.div>

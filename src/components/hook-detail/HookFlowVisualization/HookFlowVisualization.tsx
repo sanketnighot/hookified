@@ -4,14 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { registry } from "@/lib/plugins";
 import { Hook } from "@/lib/types";
 import {
-    ArrowRight,
-    Bot,
-    Calendar,
-    Code,
-    Globe,
-    Link as LinkIcon,
-    Radio,
-    Webhook,
+  ArrowRight,
+  Bot,
+  Calendar,
+  Code,
+  Globe,
+  Link as LinkIcon,
+  Radio,
+  Webhook,
 } from "lucide-react";
 
 interface HookFlowVisualizationProps {
@@ -68,7 +68,7 @@ export function HookFlowVisualization({ hook }: HookFlowVisualizationProps) {
             {actions.map((action, index) => {
               const actionDef = registry.getAction(action.type);
               const ActionIcon = ACTION_ICONS[action.type] || Code;
-              const actionName = action.name || action.type;
+              const actionName = (action as any).name || action.type;
 
               return (
                 <div

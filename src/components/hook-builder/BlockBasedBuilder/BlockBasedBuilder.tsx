@@ -31,7 +31,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Save, Sparkles, TestTube } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ActionBlockComponent } from "./ActionBlock";
 import { AddBlockMenu } from "./AddBlockMenu";
@@ -40,6 +40,20 @@ import { TriggerBlock } from "./TriggerBlock";
 import { ValidationPanel } from "./ValidationPanel";
 
 export function BlockBasedBuilder() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-4xl mx-auto flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      }
+    >
+      <BlockBasedBuilderContent />
+    </Suspense>
+  );
+}
+
+function BlockBasedBuilderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editHookId = searchParams.get("edit");

@@ -5,35 +5,60 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormField } from "@/lib/plugins/types";
 import { AlertCircle } from "lucide-react";
+import { TelegramChatIdField } from "./TelegramChatIdField";
 
 interface DynamicFieldProps {
   field: FormField;
   value: any;
   onChange: (value: any) => void;
   error?: string;
+  actionType?: string;
 }
 
-export function DynamicField({ field, value, onChange, error }: DynamicFieldProps) {
+export function DynamicField({
+  field,
+  value,
+  onChange,
+  error,
+  actionType,
+}: DynamicFieldProps) {
   const handleChange = (newValue: any) => {
     onChange(newValue);
   };
 
+  // Special handling for Telegram chatId field
+  if (actionType === "TELEGRAM" && field.name === "chatId") {
+    const botName = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+    console.log("botName", botName);
+    if (!botName) {
+      throw new Error("NEXT_PUBLIC_TELEGRAM_BOT_USERNAME is not set");
+    }
+    return (
+      <TelegramChatIdField
+        value={value}
+        onChange={onChange}
+        error={error}
+        botName={botName}
+      />
+    );
+  }
+
   const renderField = () => {
     switch (field.type) {
-      case 'text':
+      case "text":
         return (
           <Input
-            value={value || ''}
+            value={value || ""}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}
             className="glass"
           />
         );
 
-      case 'textarea':
+      case "textarea":
         return (
           <textarea
-            value={value || ''}
+            value={value || ""}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}
             rows={4}
@@ -41,29 +66,29 @@ export function DynamicField({ field, value, onChange, error }: DynamicFieldProp
           />
         );
 
-      case 'password':
+      case "password":
         return (
           <Input
             type="password"
-            value={value || ''}
+            value={value || ""}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}
             className="glass"
           />
         );
 
-      case 'number':
+      case "number":
         return (
           <Input
             type="number"
-            value={value || ''}
+            value={value || ""}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}
             className="glass"
           />
         );
 
-      case 'select':
+      case "select":
         return (
           <Select value={value?.toString()} onValueChange={handleChange}>
             <SelectTrigger className="glass">
@@ -71,7 +96,10 @@ export function DynamicField({ field, value, onChange, error }: DynamicFieldProp
             </SelectTrigger>
             <SelectContent>
               {field.options?.map((option) => (
-                <SelectItem key={String(option.value)} value={String(option.value)}>
+                <SelectItem
+                  key={String(option.value)}
+                  value={String(option.value)}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -79,7 +107,7 @@ export function DynamicField({ field, value, onChange, error }: DynamicFieldProp
           </Select>
         );
 
-      case 'checkbox':
+      case "checkbox":
         return (
           <div className="flex items-center space-x-2">
             <input

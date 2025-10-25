@@ -5,6 +5,8 @@ export interface User {
   name: string | null;
   avatarUrl: string | null;
   supabaseId: string;
+  telegramChatId?: string | null;
+  telegramUsername?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -149,6 +149,7 @@ export function ActionBlockComponent({
         values={action.config}
         onChange={handleConfigChange}
         errors={action.errors}
+        actionType={action.type}
       />
     );
   };

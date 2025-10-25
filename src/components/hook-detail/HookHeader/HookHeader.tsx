@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Hook } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Edit, Pause, Play, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Pause, Play, PlayCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ export function HookHeader({ hook, onUpdate }: HookHeaderProps) {
   const router = useRouter();
   const [localHook, setLocalHook] = useState(hook);
   const [loading, setLoading] = useState(false);
+  const [running, setRunning] = useState(false);
 
   useEffect(() => {
     setLocalHook(hook);
@@ -87,11 +88,60 @@ export function HookHeader({ hook, onUpdate }: HookHeaderProps) {
     router.push(`/hook?edit=${hook.id}`);
   };
 
+  const handleRunNow = async () => {
+    try {
+      setRunning(true);
+      const response = await fetch(`/api/hooks/${hook.id}/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          triggeredBy: "manual",
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to execute hook");
+      }
+
+      const data = await response.json();
+
+      if (data.status === "SUCCESS") {
+        toast.success("Hook executed successfully!");
+        // Update hook's lastExecutedAt
+        const updatedHook = {
+          ...localHook,
+          lastExecutedAt: new Date(),
+        };
+        setLocalHook(updatedHook);
+        if (onUpdate) {
+          onUpdate(updatedHook);
+        }
+      } else {
+        toast.error(data.error || "Hook execution failed");
+      }
+    } catch (error) {
+      console.error("Error executing hook:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to execute hook"
+      );
+    } finally {
+      setRunning(false);
+    }
+  };
+
   const statusColor = {
     ACTIVE: "bg-green-500/20 text-green-400 border-green-500/30",
     PAUSED: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
     ERROR: "bg-red-500/20 text-red-400 border-red-500/30",
   };
+
+  // Check if manual trigger (case-insensitive)
+  const isManualTrigger = localHook.triggerType?.toUpperCase() === "MANUAL";
+  const shouldShowRunButton = isManualTrigger && localHook.isActive;
 
   return (
     <div className="space-y-4">
@@ -116,11 +166,25 @@ export function HookHeader({ hook, onUpdate }: HookHeaderProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Run Now button for manual triggers */}
+          {shouldShowRunButton && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleRunNow}
+              disabled={loading || running}
+              className="glass bg-green-600 hover:bg-green-700 text-white"
+            >
+              <PlayCircle className="w-4 h-4 mr-2" />
+              {running ? "Running..." : "Run Now"}
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleToggle}
-            disabled={loading}
+            disabled={loading || running}
             className="glass"
           >
             {localHook.isActive ? (
@@ -139,7 +203,7 @@ export function HookHeader({ hook, onUpdate }: HookHeaderProps) {
             variant="outline"
             size="sm"
             onClick={handleEdit}
-            disabled={loading}
+            disabled={loading || running}
             className="glass"
           >
             <Edit className="w-4 h-4" />
@@ -148,7 +212,7 @@ export function HookHeader({ hook, onUpdate }: HookHeaderProps) {
             variant="outline"
             size="sm"
             onClick={handleDelete}
-            disabled={loading}
+            disabled={loading || running}
             className="glass text-red-400 hover:text-red-300"
           >
             <Trash2 className="w-4 h-4" />
