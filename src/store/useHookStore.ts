@@ -1,4 +1,4 @@
-import { mockHooks, mockRuns, mockTemplates } from "@/lib/mockData";
+import { mockRuns, mockTemplates } from "@/lib/mockData";
 import { ActionBlock, Hook, HookRun, Template } from "@/lib/types";
 import { create } from "zustand";
 
@@ -14,6 +14,7 @@ interface HookStore {
   draftHook: Partial<Hook> | null;
 
   // Actions
+  fetchHooks: () => Promise<void>;
   setHooks: (hooks: Hook[]) => void;
   addHook: (hook: Hook) => void;
   updateHook: (id: string, updates: Partial<Hook>) => void;
@@ -50,7 +51,7 @@ interface HookStore {
 
 export const useHookStore = create<HookStore>((set, get) => ({
   // Initial state
-  hooks: mockHooks,
+  hooks: [],
   activeHook: null,
   runs: mockRuns,
   templates: mockTemplates,
@@ -60,6 +61,21 @@ export const useHookStore = create<HookStore>((set, get) => ({
   draftHook: null,
 
   // Actions
+  fetchHooks: async () => {
+    try {
+      const response = await fetch("/api/hooks");
+      if (!response.ok) {
+        throw new Error("Failed to fetch hooks");
+      }
+      const data = await response.json();
+      console.log("Fetched hooks data:", data);
+      set({ hooks: data.hooks || [] });
+    } catch (error) {
+      console.error("Error fetching hooks:", error);
+      // Keep existing hooks on error
+    }
+  },
+
   setHooks: (hooks) => set({ hooks }),
 
   addHook: (hook) =>
@@ -184,4 +200,3 @@ export const useHookStore = create<HookStore>((set, get) => ({
     return get().runs.filter((run) => run.hookId === hookId);
   },
 }));
-
