@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth/api-helpers';
+import { env } from "@/lib/env";
 import { HookService } from '@/services/hooks/HookService';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -35,22 +36,45 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // Validate required fields
-    if (!body.name || !body.triggerType || !body.actions || body.actions.length === 0) {
+    if (
+      !body.name ||
+      !body.triggerType ||
+      !body.actions ||
+      body.actions.length === 0
+    ) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, triggerType, actions' },
+        { error: "Missing required fields: name, triggerType, actions" },
         { status: 400 }
       );
     }
 
     const hook = await HookService.createHook({
       ...body,
-      userId: user.id
+      userId: user.id,
     });
 
-    return NextResponse.json({
-      success: true,
-      hook
-    }, { status: 201 });
+    // For WEBHOOK triggers, include webhook details in response
+    if (body.triggerType === "WEBHOOK" && (hook as any).webhookSecret) {
+      const webhookUrl = `${env.NEXT_PUBLIC_APP_URL}/api/webhooks/${hook.id}`;
+
+      return NextResponse.json(
+        {
+          success: true,
+          hook,
+          webhookUrl,
+          webhookSecret: (hook as any).webhookSecret,
+        },
+        { status: 201 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        hook,
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     if (error.message === 'Unauthorized: Authentication required') {
       return NextResponse.json(
