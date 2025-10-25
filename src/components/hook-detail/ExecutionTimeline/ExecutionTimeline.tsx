@@ -4,17 +4,41 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { slideUpVariants, staggerContainerVariants } from "@/lib/animations";
 import { cn } from "@/lib/utils";
-import { useHookStore } from "@/store/useHookStore";
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+
+interface HookRun {
+  id: string;
+  status: string;
+  triggeredAt: Date | string;
+  meta?: any;
+  error?: string;
+}
 
 interface ExecutionTimelineProps {
   hookId: string;
 }
 
 export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
-  const { getRunsForHook } = useHookStore();
-  const runs = getRunsForHook(hookId);
+  const [runs, setRuns] = useState<HookRun[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRuns = async () => {
+      try {
+        // For now, runs will be empty since we don't have a runs API
+        // Once the hook execution engine is implemented, this will fetch real data
+        setRuns([]);
+      } catch (error) {
+        console.error("Failed to fetch runs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRuns();
+  }, [hookId]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -41,10 +65,12 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
   return (
     <Card className="glass neo-flat border-white/10">
       <CardHeader>
-        <CardTitle>Execution History</CardTitle>
+        <CardTitle className="text-white">Execution History</CardTitle>
       </CardHeader>
       <CardContent>
-        {runs.length === 0 ? (
+        {loading ? (
+          <p className="text-center text-muted-foreground py-8">Loading...</p>
+        ) : runs.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
             No executions yet
           </p>
@@ -65,7 +91,9 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
 
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center justify-between">
-                    <Badge className={cn("text-xs", getStatusColor(run.status))}>
+                    <Badge
+                      className={cn("text-xs", getStatusColor(run.status))}
+                    >
                       {run.status}
                     </Badge>
                     <span className="text-sm text-muted-foreground">

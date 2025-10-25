@@ -2,44 +2,18 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { slideUpVariants, staggerContainerVariants } from "@/lib/animations";
+import { registry } from "@/lib/plugins";
 import { ActionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Code, GitBranch, Send, Webhook } from "lucide-react";
 
-interface ActionOption {
-  type: ActionType;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-}
-
-const actions: ActionOption[] = [
-  {
-    type: "TELEGRAM",
-    icon: Send,
-    title: "Telegram Message",
-    description: "Send messages to Telegram chats or channels",
-  },
-  {
-    type: "WEBHOOK",
-    icon: Webhook,
-    title: "Webhook",
-    description: "POST data to external services and APIs",
-  },
-  {
-    type: "CHAIN",
-    icon: GitBranch,
-    title: "Chain Hook",
-    description: "Trigger another hook in your workflow",
-  },
-  {
-    type: "CONTRACT_CALL",
-    icon: Code,
-    title: "Contract Call",
-    description: "Execute smart contract functions onchain",
-  },
-];
+const ACTION_ICONS = {
+  TELEGRAM: Send,
+  WEBHOOK: Webhook,
+  CONTRACT_CALL: Code,
+  CHAIN: GitBranch,
+};
 
 interface ActionSelectorProps {
   selected: ActionType | null;
@@ -62,14 +36,14 @@ export function ActionSelector({ selected, onSelect }: ActionSelectorProps) {
         variants={staggerContainerVariants}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
       >
-        {actions.map((action) => {
-          const Icon = action.icon;
+        {registry.getAllActions().map((action) => {
+          const Icon = ACTION_ICONS[action.type as keyof typeof ACTION_ICONS];
           const isSelected = selected === action.type;
 
           return (
             <motion.div key={action.type} variants={slideUpVariants}>
               <Card
-                onClick={() => onSelect(action.type)}
+                onClick={() => onSelect(action.type as ActionType)}
                 className={cn(
                   "glass cursor-pointer transition-all duration-300",
                   "hover:scale-105 hover:shadow-lg",
@@ -80,9 +54,9 @@ export function ActionSelector({ selected, onSelect }: ActionSelectorProps) {
               >
                 <CardHeader>
                   <div className="w-12 h-12 rounded-xl aurora-gradient-2 flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6 text-white" />
+                    {Icon && <Icon className="w-6 h-6 text-white" />}
                   </div>
-                  <CardTitle>{action.title}</CardTitle>
+                  <CardTitle>{action.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">

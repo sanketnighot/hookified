@@ -4,13 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { slideUpVariants, staggerContainerVariants } from "@/lib/animations";
-import { ActionBlock, ActionType, BlockValidationResult, HookBuilderState, Template, TriggerType } from "@/lib/types";
+import { registry } from "@/lib/plugins";
+import {
+  ActionBlock,
+  ActionType,
+  BlockValidationResult,
+  HookBuilderState,
+  Template,
+  TriggerType,
+} from "@/lib/types";
 import { useHookStore } from "@/store/useHookStore";
-import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Save, Sparkles, TestTube } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ActionBlockComponent } from "./ActionBlock";
@@ -21,6 +41,8 @@ import { ValidationPanel } from "./ValidationPanel";
 
 export function BlockBasedBuilder() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editHookId = searchParams.get("edit");
   const { addHook, templates } = useHookStore();
 
   const sensors = useSensors(
@@ -41,10 +63,64 @@ export function BlockBasedBuilder() {
   const [isTemplateOpen, setIsTemplateOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isLoadingEditHook, setIsLoadingEditHook] = useState(false);
   const lastOverId = useRef<string | null>(null);
 
-  // Auto-save draft to localStorage
+  // Load hook data in edit mode
   useEffect(() => {
+    const loadHookForEdit = async () => {
+      if (!editHookId) return;
+
+      setIsLoadingEditHook(true);
+      try {
+        const response = await fetch(`/api/hooks/${editHookId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const hook = data.hook;
+
+          // Transform actions from hook format to builder format
+          const transformedActions = (hook.actions || []).map(
+            (action: any, index: number) => ({
+              id: `action-${index}`,
+              order: action.order !== undefined ? action.order : index,
+              type: action.type,
+              config: action.config || { type: action.type },
+              isExpanded: false,
+              isValid: false,
+              errors: [],
+              customName: action.name, // Restore saved custom name
+              defaultName: `Action ${index + 1}`,
+            })
+          );
+
+          // Transform hook data to builder state
+          setBuilderState({
+            name: hook.name || "",
+            description: hook.description || "",
+            triggerType: hook.triggerType,
+            triggerConfig: hook.triggerConfig || { type: hook.triggerType },
+            actions: transformedActions,
+          });
+        } else {
+          toast.error("Failed to load hook for editing");
+          router.push("/dashboard");
+        }
+      } catch (error) {
+        console.error("Error loading hook:", error);
+        toast.error("Failed to load hook for editing");
+        router.push("/dashboard");
+      } finally {
+        setIsLoadingEditHook(false);
+      }
+    };
+
+    loadHookForEdit();
+  }, [editHookId, router]);
+
+  // Auto-save draft to localStorage (only when not in edit mode)
+  useEffect(() => {
+    if (editHookId) return; // Don't save drafts when editing
+
     const draftKey = "hook-builder-draft";
     const savedDraft = localStorage.getItem(draftKey);
 
@@ -56,14 +132,14 @@ export function BlockBasedBuilder() {
         console.error("Failed to parse saved draft:", error);
       }
     }
-  }, []);
+  }, [editHookId]);
 
   useEffect(() => {
     const draftKey = "hook-builder-draft";
     localStorage.setItem(draftKey, JSON.stringify(builderState));
   }, [builderState]);
 
-  // Validation logic
+  // Validation logic using registry
   const validateBuilder = useCallback((): BlockValidationResult => {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -73,50 +149,27 @@ export function BlockBasedBuilder() {
       errors.push("Hook name is required");
     }
 
-    // Check trigger configuration
-    if (builderState.triggerType === "ONCHAIN") {
-      if (!builderState.triggerConfig.contractAddress) {
-        errors.push("Contract address is required for onchain triggers");
-      }
-      if (!builderState.triggerConfig.eventName) {
-        errors.push("Event name is required for onchain triggers");
-      }
-    } else if (builderState.triggerType === "CRON") {
-      if (!builderState.triggerConfig.cronExpression) {
-        errors.push("Cron expression is required for scheduled triggers");
-      }
-    } else if (builderState.triggerType === "WEBHOOK") {
-      if (!builderState.triggerConfig.webhookUrl) {
-        errors.push("Webhook URL is required for webhook triggers");
-      }
-    }
+    // Validate trigger configuration using registry
+    const triggerValidation = registry.validateTriggerConfig(
+      builderState.triggerType,
+      builderState.triggerConfig
+    );
+    errors.push(...triggerValidation.errors);
 
     // Check actions
     if (builderState.actions.length === 0) {
       errors.push("At least one action is required");
     }
 
-    // Validate each action
+    // Validate each action using registry
     builderState.actions.forEach((action, index) => {
-      if (action.type === "TELEGRAM") {
-        if (!action.config.botToken) {
-          errors.push(`Action ${index + 1}: Bot token is required for Telegram actions`);
-        }
-        if (!action.config.chatId) {
-          errors.push(`Action ${index + 1}: Chat ID is required for Telegram actions`);
-        }
-      } else if (action.type === "WEBHOOK") {
-        if (!action.config.webhookUrl) {
-          errors.push(`Action ${index + 1}: Webhook URL is required for webhook actions`);
-        }
-      } else if (action.type === "CONTRACT_CALL") {
-        if (!action.config.contractAddress) {
-          errors.push(`Action ${index + 1}: Contract address is required for contract call actions`);
-        }
-        if (!action.config.functionName) {
-          errors.push(`Action ${index + 1}: Function name is required for contract call actions`);
-        }
-      }
+      const actionValidation = registry.validateActionConfig(
+        action.type,
+        action.config
+      );
+      actionValidation.errors.forEach((err) =>
+        errors.push(`Action ${index + 1}: ${err}`)
+      );
     });
 
     // Warnings
@@ -134,7 +187,7 @@ export function BlockBasedBuilder() {
   const validation = validateBuilder();
 
   const handleTriggerChange = (type: TriggerType, config: any) => {
-    setBuilderState(prev => ({
+    setBuilderState((prev) => ({
       ...prev,
       triggerType: type,
       triggerConfig: config,
@@ -153,26 +206,26 @@ export function BlockBasedBuilder() {
       defaultName: `Action ${builderState.actions.length + 1}`,
     };
 
-    setBuilderState(prev => ({
+    setBuilderState((prev) => ({
       ...prev,
       actions: [...prev.actions, newAction],
     }));
   };
 
   const handleUpdateAction = (updatedAction: ActionBlock) => {
-    setBuilderState(prev => ({
+    setBuilderState((prev) => ({
       ...prev,
-      actions: prev.actions.map(action =>
+      actions: prev.actions.map((action) =>
         action.id === updatedAction.id ? updatedAction : action
       ),
     }));
   };
 
   const handleDeleteAction = (actionId: string) => {
-    setBuilderState(prev => ({
+    setBuilderState((prev) => ({
       ...prev,
       actions: prev.actions
-        .filter(action => action.id !== actionId)
+        .filter((action) => action.id !== actionId)
         .map((action, index) => ({ ...action, order: index })),
     }));
   };
@@ -186,15 +239,22 @@ export function BlockBasedBuilder() {
     if (lastOverId.current === over.id) return;
     lastOverId.current = over.id;
 
-    setBuilderState(prev => {
-      const oldIndex = prev.actions.findIndex(action => action.id === active.id);
-      const newIndex = prev.actions.findIndex(action => action.id === over.id);
+    setBuilderState((prev) => {
+      const oldIndex = prev.actions.findIndex(
+        (action) => action.id === active.id
+      );
+      const newIndex = prev.actions.findIndex(
+        (action) => action.id === over.id
+      );
 
       if (oldIndex !== newIndex) {
         const newActions = arrayMove(prev.actions, oldIndex, newIndex);
         return {
           ...prev,
-          actions: newActions.map((action, index) => ({ ...action, order: index })),
+          actions: newActions.map((action, index) => ({
+            ...action,
+            order: index,
+          })),
         };
       }
 
@@ -215,15 +275,22 @@ export function BlockBasedBuilder() {
     // The reordering is already handled in handleDragOver for real-time updates
     // This just ensures the final state is correct
     if (active.id !== over?.id) {
-      setBuilderState(prev => {
-        const oldIndex = prev.actions.findIndex(action => action.id === active.id);
-        const newIndex = prev.actions.findIndex(action => action.id === over.id);
+      setBuilderState((prev) => {
+        const oldIndex = prev.actions.findIndex(
+          (action) => action.id === active.id
+        );
+        const newIndex = prev.actions.findIndex(
+          (action) => action.id === over.id
+        );
 
         if (oldIndex !== newIndex) {
           const newActions = arrayMove(prev.actions, oldIndex, newIndex);
           return {
             ...prev,
-            actions: newActions.map((action, index) => ({ ...action, order: index })),
+            actions: newActions.map((action, index) => ({
+              ...action,
+              order: index,
+            })),
           };
         }
 
@@ -233,14 +300,17 @@ export function BlockBasedBuilder() {
   };
 
   const handleReorderActions = (fromIndex: number, toIndex: number) => {
-    setBuilderState(prev => {
+    setBuilderState((prev) => {
       const newActions = [...prev.actions];
       const [movedAction] = newActions.splice(fromIndex, 1);
       newActions.splice(toIndex, 0, movedAction);
 
       return {
         ...prev,
-        actions: newActions.map((action, index) => ({ ...action, order: index })),
+        actions: newActions.map((action, index) => ({
+          ...action,
+          order: index,
+        })),
       };
     });
   };
@@ -251,16 +321,18 @@ export function BlockBasedBuilder() {
       description: template.description,
       triggerType: template.triggerConfig.type,
       triggerConfig: template.triggerConfig,
-      actions: [{
-        id: `action-${Date.now()}`,
-        order: 0,
-        type: template.actionConfig.type,
-        config: template.actionConfig,
-        isExpanded: true,
-        isValid: false,
-        errors: [],
-        defaultName: "Action 1",
-      }],
+      actions: [
+        {
+          id: `action-${Date.now()}`,
+          order: 0,
+          type: template.actionConfig.type,
+          config: template.actionConfig,
+          isExpanded: true,
+          isValid: false,
+          errors: [],
+          defaultName: "Action 1",
+        },
+      ],
     });
   };
 
@@ -272,36 +344,73 @@ export function BlockBasedBuilder() {
 
     setIsSaving(true);
     try {
-      // Create hook from builder state
-      const newHook = {
-        id: `hook-${Date.now()}`,
-        userId: "user-1", // TODO: Get from auth
+      // Prepare hook data for API
+      const hookData = {
         name: builderState.name,
         description: builderState.description,
         triggerType: builderState.triggerType,
         triggerConfig: builderState.triggerConfig,
-        actionConfig: builderState.actions[0]?.config || { type: "TELEGRAM" }, // Backward compatibility
-        actions: builderState.actions,
-        status: "ACTIVE" as const,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        actions: builderState.actions.map((action) => ({
+          order: action.order,
+          type: action.type,
+          config: action.config,
+          name: action.customName, // Include custom name if set
+        })),
       };
 
-      addHook(newHook);
-      toast.success("Hook created successfully!");
+      let response;
+      if (editHookId) {
+        // Update existing hook
+        response = await fetch(`/api/hooks/${editHookId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(hookData),
+        });
+      } else {
+        // Create new hook
+        response = await fetch("/api/hooks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(hookData),
+        });
+      }
 
-      // Clear draft
-      localStorage.removeItem("hook-builder-draft");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || `Failed to ${editHookId ? "update" : "create"} hook`
+        );
+      }
+
+      toast.success(`Hook ${editHookId ? "updated" : "created"} successfully!`);
+
+      // Clear draft if not editing
+      if (!editHookId) {
+        localStorage.removeItem("hook-builder-draft");
+      }
 
       router.push("/dashboard");
-    } catch (error) {
-      toast.error("Failed to save hook");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save hook");
       console.error("Save error:", error);
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Show loading state when fetching hook for editing
+  if (isLoadingEditHook) {
+    return (
+      <div className="max-w-4xl mx-auto flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading hook...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -322,9 +431,13 @@ export function BlockBasedBuilder() {
             Back
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">Create Hook</h1>
+            <h1 className="text-2xl font-bold">
+              {editHookId ? "Edit Hook" : "Create Hook"}
+            </h1>
             <p className="text-muted-foreground">
-              Build your automation with blocks
+              {editHookId
+                ? "Update your automation hook"
+                : "Build your automation with blocks"}
             </p>
           </div>
           <Button
@@ -338,14 +451,34 @@ export function BlockBasedBuilder() {
         </div>
 
         {/* Hook Name */}
-        <div className="space-y-2 mb-6">
+        <div className="space-y-2 mb-4">
           <Label htmlFor="hook-name">Hook Name</Label>
           <Input
             id="hook-name"
             placeholder="My Awesome Hook"
             value={builderState.name}
-            onChange={(e) => setBuilderState(prev => ({ ...prev, name: e.target.value }))}
+            onChange={(e) =>
+              setBuilderState((prev) => ({ ...prev, name: e.target.value }))
+            }
             className="glass text-lg"
+          />
+        </div>
+
+        {/* Hook Description */}
+        <div className="space-y-2 mb-6">
+          <Label htmlFor="hook-description">Description (Optional)</Label>
+          <textarea
+            id="hook-description"
+            placeholder="What does this hook do? (optional)"
+            value={builderState.description || ""}
+            onChange={(e) =>
+              setBuilderState((prev) => ({
+                ...prev,
+                description: e.target.value,
+              }))
+            }
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg glass border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
           />
         </div>
       </motion.div>
@@ -362,8 +495,17 @@ export function BlockBasedBuilder() {
           triggerType={builderState.triggerType}
           triggerConfig={builderState.triggerConfig}
           onChange={handleTriggerChange}
-          isValid={validation.isValid && builderState.triggerConfig.type === builderState.triggerType}
-          errors={validation.errors.filter(error => error.includes("trigger") || error.includes("contract") || error.includes("cron") || error.includes("webhook"))}
+          isValid={
+            validation.isValid &&
+            builderState.triggerConfig.type === builderState.triggerType
+          }
+          errors={validation.errors.filter(
+            (error) =>
+              error.includes("trigger") ||
+              error.includes("contract") ||
+              error.includes("cron") ||
+              error.includes("webhook")
+          )}
         />
 
         {/* Action Blocks */}
@@ -375,7 +517,7 @@ export function BlockBasedBuilder() {
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={builderState.actions.map(action => action.id)}
+            items={builderState.actions.map((action) => action.id)}
             strategy={verticalListSortingStrategy}
           >
             <AnimatePresence>
@@ -392,7 +534,6 @@ export function BlockBasedBuilder() {
               ))}
             </AnimatePresence>
           </SortableContext>
-
         </DndContext>
 
         {/* Add Action Block */}
@@ -412,10 +553,7 @@ export function BlockBasedBuilder() {
         variants={slideUpVariants}
         className="flex justify-end gap-3"
       >
-        <Button
-          variant="outline"
-          className="glass border-white/20"
-        >
+        <Button variant="outline" className="glass border-white/20">
           <TestTube className="w-4 h-4 mr-2" />
           Test Hook
         </Button>

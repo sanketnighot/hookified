@@ -1,7 +1,8 @@
 export interface AuthModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess?: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  defaultTab?: "signin" | "signup";
+  onSuccess?: () => void;
 }
 
 export interface AuthFormData {

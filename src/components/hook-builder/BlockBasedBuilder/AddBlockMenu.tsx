@@ -3,64 +3,64 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { slideUpVariants, staggerContainerVariants } from "@/lib/animations";
+import { registry } from "@/lib/plugins";
 import { ActionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Send, Webhook, GitBranch, Code, X } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Code, GitBranch, Plus, Search, Send, Webhook, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface AddBlockMenuProps {
   onAddAction: (type: ActionType) => void;
   disabled?: boolean;
 }
 
-const ACTION_OPTIONS = [
-  {
-    type: "TELEGRAM" as ActionType,
-    icon: Send,
-    title: "Telegram Message",
-    description: "Send messages to Telegram chats",
-    shortcut: "/telegram",
-  },
-  {
-    type: "WEBHOOK" as ActionType,
-    icon: Webhook,
-    title: "Webhook",
-    description: "POST data to external APIs",
-    shortcut: "/webhook",
-  },
-  {
-    type: "CONTRACT_CALL" as ActionType,
-    icon: Code,
-    title: "Contract Call",
-    description: "Execute smart contract functions",
-    shortcut: "/contract",
-  },
-  {
-    type: "CHAIN" as ActionType,
-    icon: GitBranch,
-    title: "Chain Hook",
-    description: "Trigger another hook",
-    shortcut: "/chain",
-  },
-];
+// Map action types to shortcuts
+const ACTION_SHORTCUTS: Record<string, string> = {
+  TELEGRAM: "/telegram",
+  WEBHOOK: "/webhook",
+  CONTRACT_CALL: "/contract",
+  CHAIN: "/chain",
+};
 
-export function AddBlockMenu({ onAddAction, disabled = false }: AddBlockMenuProps) {
+const ACTION_ICONS = {
+  TELEGRAM: Send,
+  WEBHOOK: Webhook,
+  CONTRACT_CALL: Code,
+  CHAIN: GitBranch,
+};
+
+export function AddBlockMenu({
+  onAddAction,
+  disabled = false,
+}: AddBlockMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [slashCommand, setSlashCommand] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filteredActions = ACTION_OPTIONS.filter(action =>
-    action.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    action.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    action.shortcut.toLowerCase().includes(searchQuery.toLowerCase())
+  // Get actions from registry
+  const actions = useMemo(() => {
+    return registry.getAllActions().map((action) => ({
+      type: action.type,
+      title: action.name,
+      description: action.description,
+      shortcut:
+        ACTION_SHORTCUTS[action.type] || `/${action.type.toLowerCase()}`,
+    }));
+  }, []);
+
+  const filteredActions = actions.filter(
+    (action) =>
+      action.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      action.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      action.shortcut.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleSlashCommand = (command: string) => {
-    const action = ACTION_OPTIONS.find(a => a.shortcut === command.toLowerCase());
+    const action = actions.find((a) => a.shortcut === command.toLowerCase());
     if (action) {
-      onAddAction(action.type);
+      onAddAction(action.type as ActionType);
       setSlashCommand("");
       setIsOpen(false);
     }
@@ -96,7 +96,9 @@ export function AddBlockMenu({ onAddAction, disabled = false }: AddBlockMenuProp
       >
         <Plus className="w-4 h-4 mr-2" />
         Add Action Block
-        <span className="ml-auto text-xs text-muted-foreground">Press / for shortcuts</span>
+        <span className="ml-auto text-xs text-muted-foreground">
+          Press / for shortcuts
+        </span>
       </Button>
 
       {/* Menu Overlay */}
@@ -157,12 +159,13 @@ export function AddBlockMenu({ onAddAction, disabled = false }: AddBlockMenuProp
                 className="space-y-2 max-h-64 overflow-y-auto"
               >
                 {filteredActions.map((action) => {
-                  const Icon = action.icon;
+                  const Icon =
+                    ACTION_ICONS[action.type as keyof typeof ACTION_ICONS];
                   return (
                     <motion.div key={action.type} variants={slideUpVariants}>
                       <button
                         onClick={() => {
-                          onAddAction(action.type);
+                          onAddAction(action.type as ActionType);
                           setIsOpen(false);
                         }}
                         className={cn(
@@ -173,11 +176,13 @@ export function AddBlockMenu({ onAddAction, disabled = false }: AddBlockMenuProp
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg aurora-gradient-2 flex items-center justify-center">
-                            <Icon className="w-4 h-4 text-white" />
+                            {Icon && <Icon className="w-4 h-4 text-white" />}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{action.title}</span>
+                              <span className="font-medium">
+                                {action.title}
+                              </span>
                               <span className="text-xs text-muted-foreground bg-white/10 px-2 py-0.5 rounded">
                                 {action.shortcut}
                               </span>

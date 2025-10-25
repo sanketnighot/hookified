@@ -5,7 +5,7 @@ import { slideUpVariants } from "@/lib/animations";
 import { BlockValidationResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { AlertCircle, CheckCircle, AlertTriangle, Info } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle, Info } from "lucide-react";
 
 interface ValidationPanelProps {
   validation: BlockValidationResult;
@@ -17,24 +17,30 @@ export function ValidationPanel({ validation, className }: ValidationPanelProps)
 
   if (isValid && errors.length === 0 && warnings.length === 0) {
     return (
-      <motion.div
-        variants={slideUpVariants}
-        className={cn("flex items-center gap-2 text-green-500", className)}
-      >
-        <CheckCircle className="w-4 h-4" />
-        <span className="text-sm font-medium">Ready to save</span>
-      </motion.div>
+      <div className={className}>
+        <div className="flex items-center gap-2 text-green-500">
+          <CheckCircle className="w-4 h-4" />
+          <span className="text-sm font-medium">Ready to save</span>
+        </div>
+      </div>
     );
   }
 
   return (
-    <motion.div variants={slideUpVariants} className={className}>
-      <Card className={cn(
-        "glass border-white/10",
-        errors.length > 0 ? "border-red-500/30" : warnings.length > 0 ? "border-yellow-500/30" : "border-green-500/30"
-      )}>
+    <div className={className}>
+      <div>
+      <Card
+        className={cn(
+          "glass border-white/10 bg-white/5",
+          errors.length > 0
+            ? "border-red-500/30"
+            : warnings.length > 0
+            ? "border-yellow-500/30"
+            : "border-green-500/30"
+        )}
+      >
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm">
+          <CardTitle className="flex items-center gap-2 text-sm text-white">
             {errors.length > 0 ? (
               <>
                 <AlertCircle className="w-4 h-4 text-red-500" />
@@ -66,7 +72,10 @@ export function ValidationPanel({ validation, className }: ValidationPanelProps)
               </div>
               <ul className="space-y-1">
                 {errors.map((error, index) => (
-                  <li key={index} className="text-sm text-red-400 flex items-start gap-2">
+                  <li
+                    key={index}
+                    className="text-sm text-red-400 flex items-start gap-2"
+                  >
                     <span className="text-red-500 mt-0.5">•</span>
                     <span>{error}</span>
                   </li>
@@ -86,7 +95,10 @@ export function ValidationPanel({ validation, className }: ValidationPanelProps)
               </div>
               <ul className="space-y-1">
                 {warnings.map((warning, index) => (
-                  <li key={index} className="text-sm text-yellow-400 flex items-start gap-2">
+                  <li
+                    key={index}
+                    className="text-sm text-yellow-400 flex items-start gap-2"
+                  >
                     <span className="text-yellow-500 mt-0.5">•</span>
                     <span>{warning}</span>
                   </li>
@@ -103,7 +115,10 @@ export function ValidationPanel({ validation, className }: ValidationPanelProps)
                 {errors.length > 0 ? (
                   <p>Fix the errors above before saving your hook.</p>
                 ) : warnings.length > 0 ? (
-                  <p>Your hook will work, but consider addressing these warnings for better reliability.</p>
+                  <p>
+                    Your hook will work, but consider addressing these warnings
+                    for better reliability.
+                  </p>
                 ) : (
                   <p>Your hook is ready to be saved and activated.</p>
                 )}
@@ -112,6 +127,7 @@ export function ValidationPanel({ validation, className }: ValidationPanelProps)
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+      </div>
+    </div>
   );
 }

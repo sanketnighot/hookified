@@ -6,15 +6,42 @@ import { Activity, CheckCircle2, Clock, XCircle } from "lucide-react";
 
 interface MetricsPanelProps {
   hook: Hook;
+  runs?: Array<{ status: string; duration?: number }>;
 }
 
-export function MetricsPanel({ hook }: MetricsPanelProps) {
-  // Mock metrics - in real app, calculate from runs
+export function MetricsPanel({ hook, runs = [] }: MetricsPanelProps) {
+  const totalRuns = runs.length;
+  const successful = runs.filter((r) => r.status === "SUCCESS").length;
+  const failed = runs.filter((r) => r.status === "FAILED").length;
+
+  // Calculate average duration
+  const durations = runs
+    .filter((r) => r.duration !== undefined)
+    .map((r) => r.duration!);
+  const avgDuration =
+    durations.length > 0
+      ? (
+          durations.reduce((a, b) => a + b, 0) /
+          durations.length /
+          1000
+        ).toFixed(1) + "s"
+      : "N/A";
+
   const metrics = [
-    { label: "Total Runs", value: "156", icon: Activity },
-    { label: "Successful", value: "152", icon: CheckCircle2, color: "text-green-400" },
-    { label: "Failed", value: "4", icon: XCircle, color: "text-red-400" },
-    { label: "Avg Duration", value: "2.3s", icon: Clock },
+    { label: "Total Runs", value: totalRuns.toString(), icon: Activity },
+    {
+      label: "Successful",
+      value: successful.toString(),
+      icon: CheckCircle2,
+      color: "text-green-400",
+    },
+    {
+      label: "Failed",
+      value: failed.toString(),
+      icon: XCircle,
+      color: "text-red-400",
+    },
+    { label: "Avg Duration", value: avgDuration, icon: Clock },
   ];
 
   return (
@@ -26,12 +53,20 @@ export function MetricsPanel({ hook }: MetricsPanelProps) {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{metric.label}</p>
-                  <p className={`text-2xl font-bold mt-1 ${metric.color || ""}`}>
+                  <p className="text-sm text-muted-foreground">
+                    {metric.label}
+                  </p>
+                  <p
+                    className={`text-2xl font-bold mt-1 ${metric.color || ""}`}
+                  >
                     {metric.value}
                   </p>
                 </div>
-                <Icon className={`w-8 h-8 ${metric.color || "text-muted-foreground"}`} />
+                <Icon
+                  className={`w-8 h-8 ${
+                    metric.color || "text-muted-foreground"
+                  }`}
+                />
               </div>
             </CardContent>
           </Card>

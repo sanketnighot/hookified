@@ -2,44 +2,18 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { slideUpVariants, staggerContainerVariants } from "@/lib/animations";
+import { registry } from "@/lib/plugins";
 import { TriggerType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Blocks, Clock, MousePointer, Webhook } from "lucide-react";
 
-interface TriggerOption {
-  type: TriggerType;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-}
-
-const triggers: TriggerOption[] = [
-  {
-    type: "ONCHAIN",
-    icon: Blocks,
-    title: "Onchain Event",
-    description: "Monitor smart contract events and token transfers",
-  },
-  {
-    type: "CRON",
-    icon: Clock,
-    title: "Schedule",
-    description: "Run hooks at specific times or intervals",
-  },
-  {
-    type: "MANUAL",
-    icon: MousePointer,
-    title: "Manual",
-    description: "Trigger hooks manually when you need them",
-  },
-  {
-    type: "WEBHOOK",
-    icon: Webhook,
-    title: "Webhook",
-    description: "Trigger from external services via HTTP requests",
-  },
-];
+const TRIGGER_ICONS = {
+  ONCHAIN: Blocks,
+  CRON: Clock,
+  WEBHOOK: Webhook,
+  MANUAL: MousePointer,
+};
 
 interface TriggerSelectorProps {
   selected: TriggerType | null;
@@ -62,14 +36,15 @@ export function TriggerSelector({ selected, onSelect }: TriggerSelectorProps) {
         variants={staggerContainerVariants}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
       >
-        {triggers.map((trigger) => {
-          const Icon = trigger.icon;
+        {registry.getAllTriggers().map((trigger) => {
+          const Icon =
+            TRIGGER_ICONS[trigger.type as keyof typeof TRIGGER_ICONS];
           const isSelected = selected === trigger.type;
 
           return (
             <motion.div key={trigger.type} variants={slideUpVariants}>
               <Card
-                onClick={() => onSelect(trigger.type)}
+                onClick={() => onSelect(trigger.type as TriggerType)}
                 className={cn(
                   "glass cursor-pointer transition-all duration-300",
                   "hover:scale-105 hover:shadow-lg",
@@ -80,9 +55,9 @@ export function TriggerSelector({ selected, onSelect }: TriggerSelectorProps) {
               >
                 <CardHeader>
                   <div className="w-12 h-12 rounded-xl aurora-gradient-1 flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6 text-white" />
+                    {Icon && <Icon className="w-6 h-6 text-white" />}
                   </div>
-                  <CardTitle>{trigger.title}</CardTitle>
+                  <CardTitle>{trigger.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">

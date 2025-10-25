@@ -3,12 +3,29 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { slideUpVariants } from "@/lib/animations";
+import { registry } from "@/lib/plugins";
 import { TriggerConfig, TriggerType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ChevronDown, ChevronRight, Clock, MousePointer, Webhook, Blocks, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  AlertCircle,
+  Blocks,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  MousePointer,
+  Webhook,
+} from "lucide-react";
 import { useState } from "react";
-import { OnchainTriggerForm, CronTriggerForm, WebhookTriggerForm } from "./ConfigForms";
+import { DynamicForm } from "../DynamicForm";
+
+const TRIGGER_ICONS = {
+  ONCHAIN: Blocks,
+  CRON: Clock,
+  WEBHOOK: Webhook,
+  MANUAL: MousePointer,
+};
 
 interface TriggerBlockProps {
   triggerType: TriggerType;
@@ -18,36 +35,15 @@ interface TriggerBlockProps {
   errors?: string[];
 }
 
-const TRIGGER_OPTIONS = [
-  {
-    type: "ONCHAIN" as TriggerType,
-    icon: Blocks,
-    title: "Onchain Event",
-    description: "Monitor smart contract events",
-  },
-  {
-    type: "CRON" as TriggerType,
-    icon: Clock,
-    title: "Schedule",
-    description: "Run at specific times",
-  },
-  {
-    type: "WEBHOOK" as TriggerType,
-    icon: Webhook,
-    title: "Webhook",
-    description: "Trigger from external services",
-  },
-  {
-    type: "MANUAL" as TriggerType,
-    icon: MousePointer,
-    title: "Manual",
-    description: "Run manually",
-  },
-];
-
-export function TriggerBlock({ triggerType, triggerConfig, onChange, isValid, errors }: TriggerBlockProps) {
+export function TriggerBlock({
+  triggerType,
+  triggerConfig,
+  onChange,
+  isValid,
+  errors,
+}: TriggerBlockProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const selectedTrigger = TRIGGER_OPTIONS.find(t => t.type === triggerType);
+  const trigger = registry.getTrigger(triggerType);
 
   const handleTypeChange = (newType: TriggerType) => {
     // Reset config when type changes
@@ -55,57 +51,63 @@ export function TriggerBlock({ triggerType, triggerConfig, onChange, isValid, er
     onChange(newType, newConfig);
   };
 
-  const handleConfigChange = (newConfig: TriggerConfig) => {
-    onChange(triggerType, newConfig);
+  const handleConfigChange = (newValues: any) => {
+    onChange(triggerType, { ...triggerConfig, ...newValues });
   };
 
   const renderConfigForm = () => {
-    switch (triggerType) {
-      case "ONCHAIN":
-        return (
-          <OnchainTriggerForm
-            config={triggerConfig}
-            onChange={handleConfigChange}
-          />
-        );
-      case "CRON":
-        return (
-          <CronTriggerForm
-            config={triggerConfig}
-            onChange={handleConfigChange}
-          />
-        );
-      case "WEBHOOK":
-        return (
-          <WebhookTriggerForm
-            config={triggerConfig}
-            onChange={handleConfigChange}
-          />
-        );
-      case "MANUAL":
-        return (
-          <div className="p-4 text-center text-muted-foreground">
-            <MousePointer className="w-8 h-8 mx-auto mb-2" />
-            <p>Manual triggers require no configuration.</p>
-            <p className="text-xs">You can run this hook manually from the dashboard.</p>
-          </div>
-        );
-      default:
-        return null;
+    if (!trigger) {
+      return (
+        <div className="p-4 text-center text-muted-foreground">
+          <p>Select a trigger type to configure.</p>
+        </div>
+      );
     }
+
+    const schema = trigger.getConfigSchema();
+
+    if (schema.fields.length === 0) {
+      return (
+        <div className="p-4 text-center text-muted-foreground">
+          <p>No configuration required for this trigger type.</p>
+        </div>
+      );
+    }
+
+    return (
+      <DynamicForm
+        schema={schema}
+        values={triggerConfig}
+        onChange={handleConfigChange}
+        errors={errors}
+      />
+    );
   };
 
   return (
     <motion.div variants={slideUpVariants}>
-      <Card className={cn(
-        "glass border-white/10 transition-all duration-300",
-        isValid ? "border-green-500/30" : errors?.length ? "border-red-500/30" : "border-white/10"
-      )}>
+      <Card
+        className={cn(
+          "glass border-white/10 transition-all duration-300",
+          isValid
+            ? "border-green-500/30"
+            : errors?.length
+            ? "border-red-500/30"
+            : "border-white/10"
+        )}
+      >
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg aurora-gradient-1 flex items-center justify-center">
-                {selectedTrigger && <selectedTrigger.icon className="w-5 h-5 text-white" />}
+                {trigger &&
+                  (() => {
+                    const Icon =
+                      TRIGGER_ICONS[triggerType as keyof typeof TRIGGER_ICONS];
+                    return Icon ? (
+                      <Icon className="w-5 h-5 text-white" />
+                    ) : null;
+                  })()}
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -117,7 +119,7 @@ export function TriggerBlock({ triggerType, triggerConfig, onChange, isValid, er
                   ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {selectedTrigger?.title || "Select trigger type"}
+                  {trigger?.name || "Select trigger type"}
                 </p>
               </div>
             </div>
@@ -127,13 +129,14 @@ export function TriggerBlock({ triggerType, triggerConfig, onChange, isValid, er
                   <SelectValue placeholder="Select trigger" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TRIGGER_OPTIONS.map((trigger) => {
-                    const Icon = trigger.icon;
+                  {registry.getAllTriggers().map((t) => {
+                    const Icon =
+                      TRIGGER_ICONS[t.type as keyof typeof TRIGGER_ICONS];
                     return (
-                      <SelectItem key={trigger.type} value={trigger.type}>
+                      <SelectItem key={t.type} value={t.type}>
                         <div className="flex items-center gap-2">
-                          <Icon className="w-4 h-4" />
-                          <span>{trigger.title}</span>
+                          {Icon && <Icon className="w-4 h-4" />}
+                          <span>{t.name}</span>
                         </div>
                       </SelectItem>
                     );
@@ -168,7 +171,9 @@ export function TriggerBlock({ triggerType, triggerConfig, onChange, isValid, er
                 <div className="mt-4 p-3 rounded-md bg-red-500/10 border border-red-500/20">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm font-medium text-red-500">Configuration Issues</span>
+                    <span className="text-sm font-medium text-red-500">
+                      Configuration Issues
+                    </span>
                   </div>
                   <ul className="text-xs text-red-400 space-y-1">
                     {errors.map((error, index) => (
