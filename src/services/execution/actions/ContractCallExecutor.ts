@@ -13,6 +13,7 @@ import {
 } from "viem/chains";
 import { BaseActionExecutor } from '../ActionExecutor';
 import { ActionExecutionResult, ExecutionContext } from '../types';
+import { WalletService } from '@/services/wallet/WalletService';
 
 export interface ContractCallConfig {
   contractAddress: string;
@@ -21,7 +22,8 @@ export interface ContractCallConfig {
   chainId?: number;
   isNativeTransfer?: boolean;
   abi?: any[];
-  // Private key and RPC URL will be loaded from environment variables
+  walletId?: string; // User's wallet ID for signing transactions
+  // Private key and RPC URL will be loaded from user's wallet or environment variables
 }
 
 export class ContractCallExecutor extends BaseActionExecutor {
@@ -40,7 +42,7 @@ export class ContractCallExecutor extends BaseActionExecutor {
     return chainMap[chainId] || mainnet;
   }
 
-  private createClients(chainId: number) {
+  private async createClients(chainId: number, walletId?: string, userId?: string) {
     const chain = this.getChainConfig(chainId);
     const contractConfig = getContractConfig();
 
@@ -55,9 +57,25 @@ export class ContractCallExecutor extends BaseActionExecutor {
       transport: http(rpcUrl),
     });
 
-    const account = privateKeyToAccount(
-      contractConfig.privateKey as `0x${string}`
-    );
+    let account;
+    let privateKey: string;
+
+    if (walletId && userId) {
+      // Use user's wallet
+      const walletWithKey = await WalletService.getWalletWithDecryptedKey(walletId, userId);
+      if (!walletWithKey || !walletWithKey.privateKey) {
+        throw new Error('Failed to access user wallet');
+      }
+      privateKey = walletWithKey.privateKey;
+    } else {
+      // Fallback to admin wallet for backward compatibility
+      if (!isContractConfigured()) {
+        throw new Error('No wallet configured for contract calls');
+      }
+      privateKey = contractConfig.privateKey;
+    }
+
+    account = privateKeyToAccount(privateKey as `0x${string}`);
 
     const walletClient = createWalletClient({
       account,
@@ -94,15 +112,28 @@ export class ContractCallExecutor extends BaseActionExecutor {
         throw new Error("Invalid contract address format");
       }
 
-      // Get environment variables
-      if (!isContractConfigured()) {
+      // Validate wallet access if walletId is provided
+      if (actionConfig.walletId && context.userId) {
+        const hasAccess = await WalletService.validateWalletOwnership(
+          actionConfig.walletId,
+          context.userId
+        );
+        if (!hasAccess) {
+          throw new Error("User does not have access to the specified wallet");
+        }
+      }
+
+      // Check if we have either a user wallet or admin wallet configured
+      if (!actionConfig.walletId && !isContractConfigured()) {
         throw new Error(
-          "Contract private key or RPC URL not configured in environment variables"
+          "No wallet configured for contract calls. Please specify a wallet or configure admin wallet."
         );
       }
 
-      const { publicClient, walletClient } = this.createClients(
-        actionConfig.chainId
+      const { publicClient, walletClient } = await this.createClients(
+        actionConfig.chainId,
+        actionConfig.walletId,
+        context.userId
       );
 
       let result: any;

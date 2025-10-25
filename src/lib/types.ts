@@ -79,6 +79,7 @@ export interface ActionConfig {
   tokenDecimals?: number; // For ERC-20 transfers
   tokenSymbol?: string; // For ERC-20 transfers
   chainId?: number;
+  walletId?: string; // User's wallet ID for signing transactions
 }
 
 // Block-based builder types
