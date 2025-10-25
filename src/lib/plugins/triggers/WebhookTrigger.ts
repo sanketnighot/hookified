@@ -1,57 +1,37 @@
-import { TriggerDefinition, ValidationResult, FormSchema } from '../types';
+import { FormSchema, TriggerDefinition, ValidationResult } from "../types";
 
 export interface WebhookConfig {
-  type: 'WEBHOOK';
-  webhookUrl?: string;
-  secret?: string;
+  type: "WEBHOOK";
+  secret?: string; // Auto-generated secret stored in triggerConfig (optional during creation)
 }
 
 export class WebhookTrigger implements TriggerDefinition<WebhookConfig> {
-  type = 'WEBHOOK';
-  name = 'Webhook';
-  description = 'Trigger from external services via HTTP requests';
-  icon = 'Webhook';
+  type = "WEBHOOK";
+  name = "Webhook";
+  description = "Trigger from external services via HTTP requests";
+  icon = "Webhook";
 
   validateConfig(config: WebhookConfig): ValidationResult {
     const errors: string[] = [];
 
-    if (!config.webhookUrl) {
-      errors.push('Webhook URL is required');
-    } else {
-      try {
-        const url = new URL(config.webhookUrl);
-        if (url.protocol !== 'https:') {
-          errors.push('Webhook URL must use HTTPS protocol');
-        }
-      } catch {
-        errors.push('Invalid webhook URL format');
-      }
-    }
-
-    return { isValid: errors.length === 0, errors };
+    // For webhook triggers, secret is auto-generated during creation
+    // No validation needed during the creation process
+    return { isValid: true, errors: [] };
   }
 
   getConfigSchema(): FormSchema {
     return {
       fields: [
         {
-          name: 'webhookUrl',
-          label: 'Webhook URL',
-          type: 'text',
-          placeholder: 'https://your-domain.com/webhook',
-          required: true,
-          validation: { pattern: '^https://.*' },
-          description: 'The HTTPS URL to receive webhook requests'
-        },
-        {
-          name: 'secret',
-          label: 'Secret (Optional)',
-          type: 'password',
-          placeholder: 'Your webhook secret',
+          name: "info",
+          label: "Webhook Configuration",
+          type: "text",
+          placeholder: "",
           required: false,
-          description: 'Optional secret for webhook verification'
-        }
-      ]
+          description:
+            "Webhook URL and secret will be generated automatically after hook creation. External services can trigger this hook by calling the generated endpoint with the secret.",
+        },
+      ],
     };
   }
 }

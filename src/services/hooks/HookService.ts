@@ -1,14 +1,28 @@
 import { registry } from '@/lib/plugins';
 import { prisma } from '@/lib/prisma';
+import { CronJobManager } from "@/services/triggers/CronJobManager";
 import { OnchainEngine } from "@/services/triggers/OnchainEngine";
+import crypto from "crypto";
 import { CreateHookInput, HookWithRuns, UpdateHookInput } from "./types";
 
 export class HookService {
+  private static cronJobManager = new CronJobManager();
+
   static async createHook(data: CreateHookInput) {
+    // Generate webhook secret for WEBHOOK triggers
+    let finalTriggerConfig = data.triggerConfig;
+    if (data.triggerType === "WEBHOOK") {
+      const webhookSecret = crypto.randomBytes(32).toString("hex");
+      finalTriggerConfig = {
+        ...data.triggerConfig,
+        secret: webhookSecret,
+      };
+    }
+
     // Validate trigger
     const triggerValidation = registry.validateTriggerConfig(
       data.triggerType,
-      data.triggerConfig
+      finalTriggerConfig
     );
 
     if (!triggerValidation.isValid) {
@@ -41,7 +55,7 @@ export class HookService {
         name: data.name,
         description: data.description || null,
         triggerType: data.triggerType as any,
-        triggerConfig: data.triggerConfig,
+        triggerConfig: finalTriggerConfig,
         actionConfig: data.actions[0]?.config
           ? { ...data.actions[0].config, type: data.actions[0].type }
           : {}, // For backward compatibility
@@ -63,6 +77,53 @@ export class HookService {
         );
         // Don't fail the hook creation, just log the error
       }
+    }
+
+    // Create cron job for CRON triggers
+    if (data.triggerType === "CRON") {
+      try {
+        const triggerConfig = data.triggerConfig as any;
+        const cronExpression = triggerConfig?.cronExpression;
+
+        if (cronExpression) {
+          await this.cronJobManager.createCronJob(hook.id, cronExpression);
+          console.log(`Successfully created cron job for hook ${hook.id}`);
+        } else {
+          console.warn(
+            `Hook ${hook.id} has CRON trigger type but no cron expression`
+          );
+        }
+      } catch (error) {
+        console.error(`Failed to create cron job for hook ${hook.id}:`, error);
+
+        // Check if it's a setup issue
+        if (
+          error instanceof Error &&
+          error.message.includes("pg_cron extension")
+        ) {
+          console.warn(
+            "CRON scheduling disabled: pg_cron extension not available. Please run the setup script."
+          );
+        } else if (
+          error instanceof Error &&
+          error.message.includes("exec_sql function")
+        ) {
+          console.warn(
+            "CRON scheduling disabled: exec_sql function not found. Please run the setup script."
+          );
+        }
+
+        // Don't fail the hook creation, just log the error
+        // The hook will be created but won't be scheduled until pg_cron is set up
+      }
+    }
+
+    // Return hook with webhook details if applicable
+    if (data.triggerType === "WEBHOOK") {
+      return {
+        ...hook,
+        webhookSecret: finalTriggerConfig.secret,
+      };
     }
 
     return hook;
@@ -132,13 +193,34 @@ export class HookService {
       }
     }
 
-    return await prisma.hook.update({
+    const updatedHook = await prisma.hook.update({
       where: { id },
       data: {
         ...(data as any),
         updatedAt: new Date(),
       },
     });
+
+    // Update cron job if trigger config changed
+    if (data.triggerConfig && existingHook.triggerType === "CRON") {
+      try {
+        const triggerConfig = data.triggerConfig as any;
+        const cronExpression = triggerConfig?.cronExpression;
+
+        if (cronExpression) {
+          await this.cronJobManager.updateCronJobSchedule(id, cronExpression);
+          console.log(`Successfully updated cron job schedule for hook ${id}`);
+        }
+      } catch (error) {
+        console.error(
+          `Failed to update cron job schedule for hook ${id}:`,
+          error
+        );
+        // Don't fail the update, just log the error
+      }
+    }
+
+    return updatedHook;
   }
 
   static async deleteHook(id: string, userId: string) {
@@ -165,6 +247,17 @@ export class HookService {
       }
     }
 
+    // Delete cron job for CRON triggers
+    if (existingHook.triggerType === "CRON") {
+      try {
+        await this.cronJobManager.deleteCronJob(id);
+        console.log(`Successfully deleted cron job for hook ${id}`);
+      } catch (error) {
+        console.error(`Failed to delete cron job for hook ${id}:`, error);
+        // Don't fail the deletion, just log the error
+      }
+    }
+
     await prisma.hook.delete({
       where: { id },
     });
@@ -177,7 +270,7 @@ export class HookService {
       throw new Error("Hook not found");
     }
 
-    return await prisma.hook.update({
+    const updatedHook = await prisma.hook.update({
       where: { id },
       data: {
         isActive,
@@ -185,6 +278,27 @@ export class HookService {
         updatedAt: new Date(),
       },
     });
+
+    // Update cron job status for CRON triggers
+    if (existingHook.triggerType === "CRON") {
+      try {
+        if (isActive) {
+          await this.cronJobManager.resumeCronJob(id);
+          console.log(`Successfully resumed cron job for hook ${id}`);
+        } else {
+          await this.cronJobManager.pauseCronJob(id);
+          console.log(`Successfully paused cron job for hook ${id}`);
+        }
+      } catch (error) {
+        console.error(
+          `Failed to ${isActive ? "resume" : "pause"} cron job for hook ${id}:`,
+          error
+        );
+        // Don't fail the toggle, just log the error
+      }
+    }
+
+    return updatedHook;
   }
 
   static async getHookWithRuns(

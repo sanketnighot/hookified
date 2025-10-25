@@ -3,6 +3,17 @@ import { HookExecutor } from '@/services/execution/HookExecutor';
 import { TriggerContext } from '@/services/execution/types';
 import CronExpressionParser from 'cron-parser';
 
+/**
+ * CronEngine - Backup/fallback mechanism for cron execution
+ *
+ * This engine is now primarily used for:
+ * - Manual testing and debugging
+ * - Migration purposes
+ * - Fallback execution if pg_cron jobs fail
+ *
+ * The main cron execution now happens via individual pg_cron jobs
+ * that call /api/cron/execute/[hookId] endpoints.
+ */
 export class CronEngine {
   private executor = new HookExecutor();
 
