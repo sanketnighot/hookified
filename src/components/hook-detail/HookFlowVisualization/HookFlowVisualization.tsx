@@ -42,126 +42,76 @@ export function HookFlowVisualization({ hook }: HookFlowVisualizationProps) {
   const actions = hook.actions || [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-6">
-        <h3 className="text-lg font-semibold text-white">Hook Flow</h3>
-        <span className="text-sm text-muted-foreground">(Read-only)</span>
-      </div>
+    <Card className="glass border-white/10">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-4">
+          {/* Compact Label */}
+          <div className="flex-shrink-0">
+            <span className="text-xs font-medium text-muted-foreground">
+              Flow:
+            </span>
+          </div>
 
-      {/* Flow Container */}
-      <div className="relative">
-        {/* Trigger Block */}
-        <Card className="glass border-purple-500/30 bg-purple-500/10 mb-4">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-                <TriggerIcon className="w-5 h-5 text-white" />
+          {/* Flow Chain */}
+          <div className="flex items-center gap-1.5 flex-1 overflow-x-auto">
+            {/* Trigger */}
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-purple-500/10 border border-purple-500/30">
+              <div className="w-5 h-5 rounded bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <TriggerIcon className="w-3 h-3 text-white" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-purple-400">
-                    TRIGGER
-                  </span>
-                </div>
-                <h4 className="text-base font-semibold text-white">
-                  {triggerDef?.name || hook.triggerType}
-                </h4>
-                {triggerDef?.description && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {triggerDef.description}
-                  </p>
-                )}
-              </div>
+              <span className="text-xs font-medium text-white whitespace-nowrap">
+                {triggerDef?.name || hook.triggerType}
+              </span>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Actions */}
-        <div className="space-y-3">
-          {actions.map((action, index) => {
-            const actionDef = registry.getAction(action.type);
-            const ActionIcon = ACTION_ICONS[action.type] || Code;
-            const actionName = action.name || `Action ${index + 1}`;
+            {/* Actions */}
+            {actions.map((action, index) => {
+              const actionDef = registry.getAction(action.type);
+              const ActionIcon = ACTION_ICONS[action.type] || Code;
+              const actionName = action.name || action.type;
 
-            return (
-              <div key={index} className="relative">
-                {/* Arrow */}
-                <div className="flex items-center justify-center mb-3">
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-                    <ArrowRight className="w-4 h-4 text-cyan-400" />
-                    <span className="text-xs font-medium text-cyan-400">
-                      THEN
+              return (
+                <div
+                  key={index}
+                  className="flex items-center gap-1.5 flex-shrink-0"
+                >
+                  {/* Compact Arrow */}
+                  <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+
+                  {/* Action */}
+                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-cyan-500/10 border border-cyan-500/30">
+                    <div className="w-5 h-5 rounded bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                      <ActionIcon className="w-3 h-3 text-white" />
+                    </div>
+                    <span
+                      className="text-xs font-medium text-white whitespace-nowrap max-w-[120px] truncate"
+                      title={actionName}
+                    >
+                      {actionName}
                     </span>
                   </div>
                 </div>
+              );
+            })}
 
-                {/* Action Block */}
-                <Card className="glass border-cyan-500/30 bg-cyan-500/10">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
-                        <ActionIcon className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-cyan-400">
-                            ACTION {index + 1}
-                          </span>
-                          {action.order !== undefined && (
-                            <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded">
-                              Order: {action.order}
-                            </span>
-                          )}
-                        </div>
-                        <h4 className="text-base font-semibold text-white">
-                          {actionName}
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {actionDef?.name || action.type}
-                        </p>
-                      </div>
-                    </div>
+            {/* Empty State */}
+            {actions.length === 0 && (
+              <span className="text-xs text-muted-foreground italic">
+                No actions
+              </span>
+            )}
+          </div>
 
-                    {/* Show additional config details if available */}
-                    {action.config && Object.keys(action.config).length > 1 && (
-                      <div className="mt-3 pt-3 border-t border-white/10">
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(action.config)
-                            .filter(([key]) => key !== "type")
-                            .slice(0, 3)
-                            .map(([key, value]) => (
-                              <div
-                                key={key}
-                                className="flex items-center gap-1 px-2 py-1 rounded bg-white/5 text-xs"
-                              >
-                                <span className="text-muted-foreground">
-                                  {key}:
-                                </span>
-                                <span className="text-white truncate max-w-[100px]">
-                                  {String(value).substring(0, 20)}
-                                  {String(value).length > 20 ? "..." : ""}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })}
-
-          {/* Empty State */}
-          {actions.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">
-                No actions configured for this hook
-              </p>
+          {/* Total Count Badge */}
+          {actions.length > 0 && (
+            <div className="flex-shrink-0 px-2 py-1 rounded-md bg-white/5 border border-white/10">
+              <span className="text-xs font-medium text-muted-foreground">
+                {actions.length} {actions.length === 1 ? "action" : "actions"}
+              </span>
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
