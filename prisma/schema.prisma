@@ -8,13 +8,15 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  name       String?
-  avatarUrl  String?
-  supabaseId String   @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String?
+  avatarUrl        String?
+  supabaseId       String   @unique
+  telegramChatId   String?
+  telegramUsername String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
   hooks   Hook[]
@@ -53,6 +55,11 @@ model Hook {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   lastExecutedAt DateTime?
+
+  // Trigger tracking fields
+  lastCheckedAt      DateTime?  // For CRON triggers
+  lastProcessedBlock BigInt?    // For ONCHAIN triggers
+  alchemyWebhookId   String?    // For Alchemy Notify integration
 
   // Relations
   user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
