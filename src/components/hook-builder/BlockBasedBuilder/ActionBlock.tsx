@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { DynamicForm } from "../DynamicForm";
+import { ContractCallActionForm } from "./ConfigForms/ContractCallActionForm";
 
 interface ActionBlockProps {
   action: ActionBlock;
@@ -130,6 +131,16 @@ export function ActionBlockComponent({
         <div className="p-4 text-center text-muted-foreground">
           <p>Select an action type to configure.</p>
         </div>
+      );
+    }
+
+    // Use custom form for CONTRACT_CALL actions
+    if (action.type === "CONTRACT_CALL") {
+      return (
+        <ContractCallActionForm
+          config={action.config}
+          onChange={handleConfigChange}
+        />
       );
     }
 
