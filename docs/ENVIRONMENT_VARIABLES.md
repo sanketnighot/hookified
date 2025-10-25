@@ -41,6 +41,17 @@ ADMIN_WALLET_PRIVATE_KEY="your-private-key-for-contract-calls"
 CONTRACT_RPC_URL="https://mainnet.infura.io/v3/your-project-id"
 ```
 
+### Block Explorer APIs (for ABI fetching)
+```bash
+ETHERSCAN_API_KEY="your-etherscan-api-key"
+```
+
+**Note**: A single Etherscan API key works for all Etherscan-compatible block explorers including:
+- Etherscan (Ethereum Mainnet & Sepolia)
+- BSCScan (BSC Mainnet & Testnet)
+- Polygonscan (Polygon Mainnet & Amoy)
+- Basescan (Base Mainnet & Sepolia)
+
 ### Webhook Security
 ```bash
 WEBHOOK_SECRET="your-default-webhook-secret"
@@ -92,6 +103,13 @@ CRON_SECRET="your-cron-job-secret"
 - **Required for**: CRON trigger type hooks
 - **Security**: Used to authenticate requests from Supabase Edge Functions
 - **Format**: String (any secure random string)
+
+### ETHERSCAN_API_KEY
+- **Purpose**: API key for Etherscan-compatible block explorers to fetch contract ABIs and metadata
+- **Required for**: CONTRACT_CALL action type hooks on all supported networks
+- **How to get**: Sign up at [Etherscan](https://etherscan.io/) and create an API key
+- **Format**: String (e.g., "YourApiKeyToken")
+- **Compatibility**: Works with Etherscan, BSCScan, Polygonscan, and Basescan APIs
 
 ## Configuration Management
 
