@@ -97,6 +97,20 @@ model Template {
   @@map("templates")
 }
 
+model ContractABI {
+  id              String   @id @default(cuid())
+  contractAddress String
+  chainId         Int
+  abi             Json
+  contractName    String?
+  isVerified      Boolean  @default(false)
+  lastFetched     DateTime @default(now())
+  metadata        Json?
+
+  @@unique([contractAddress, chainId])
+  @@map("contract_abis")
+}
+
 enum TriggerType {
   ONCHAIN
   CRON
