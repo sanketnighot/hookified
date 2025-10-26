@@ -107,6 +107,12 @@ CRON_SECRET="your-cron-job-secret"
 ### ETHERSCAN_API_KEY
 - **Purpose**: API key for Etherscan-compatible block explorers to fetch contract ABIs and metadata
 - **Required for**: CONTRACT_CALL action type hooks on all supported networks
+
+### LIT_RELAY_API_KEY
+- **Purpose**: API key for Lit Protocol relay service for wallet encryption/decryption
+- **Required for**: Wallet management and CONTRACT_CALL actions with user wallets
+- **Security**: Used for secure key management operations
+- **Format**: String (obtain from Lit Protocol dashboard)
 - **How to get**: Sign up at [Etherscan](https://etherscan.io/) and create an API key
 - **Format**: String (e.g., "YourApiKeyToken")
 - **Compatibility**: Works with Etherscan, BSCScan, Polygonscan, and Basescan APIs

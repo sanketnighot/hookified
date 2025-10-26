@@ -30,6 +30,7 @@ import { useEffect, useState } from "react";
 import { DynamicParameterForm } from "../../DynamicForm/DynamicParameterForm";
 import { ContractTemplateSelector } from "./ContractTemplateSelector";
 import { TransactionPreview } from "./TransactionPreview";
+import { WalletSelector } from "@/components/wallet/WalletSelector/WalletSelector";
 
 interface ContractCallActionFormProps {
   config: ActionConfig;
@@ -52,6 +53,9 @@ export function ContractCallActionForm({
   );
   const [parameters, setParameters] = useState<any[]>(config.parameters || []);
   const [abi, setAbi] = useState<any[]>(config.abi || []);
+  const [selectedWalletId, setSelectedWalletId] = useState<string>(
+    config.walletId || ""
+  );
 
   // Loading and error states
   const [isLoadingABI, setIsLoadingABI] = useState(false);
@@ -82,6 +86,7 @@ export function ContractCallActionForm({
       abi,
       functionName: selectedFunction,
       parameters,
+      walletId: selectedWalletId,
     };
 
     if (isNativeTransfer) {
@@ -112,6 +117,7 @@ export function ContractCallActionForm({
     abi,
     recipientAddress,
     transferAmount,
+    selectedWalletId,
   ]);
 
   const handleChainChange = (newChainId: string) => {
@@ -256,6 +262,12 @@ export function ContractCallActionForm({
 
   return (
     <div className="space-y-6">
+      {/* Wallet Selection */}
+      <WalletSelector
+        selectedWalletId={selectedWalletId}
+        onWalletChange={setSelectedWalletId}
+      />
+
       {/* Chain Selection */}
       <div className="space-y-2">
         <Label htmlFor="chain-select">Chain</Label>
