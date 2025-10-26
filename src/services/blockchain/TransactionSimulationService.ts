@@ -195,12 +195,21 @@ class TransactionSimulationServiceImpl implements TransactionSimulationService {
     const warnings: string[] = [];
 
     try {
+      if (!from || !to || !value) {
+        return {
+          success: false,
+          gasUsed: BigInt(0),
+          error: "Missing sender address or recipient address or amount",
+          warnings: ["Invalid transfer: no sender or recipient or amount"],
+          logs: [],
+        };
+      }
       // For native transfers, use estimateGas
       const gasEstimate = await client.estimateGas({
-        account: from || '0x0000000000000000000000000000000000000000',
+        account: from,
         to,
         value,
-        data: '0x',
+        data: "0x",
         blockNumber: options.blockNumber,
       });
 

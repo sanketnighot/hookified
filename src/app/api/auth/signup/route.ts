@@ -17,22 +17,22 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     if (provider === 'email') {
-      // Send magic link for passwordless authentication
+      // Send OTP for email authentication
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`
-        }
-      })
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
+        },
+      });
 
       if (error) {
-        throw new InternalServerError(`Failed to send magic link: ${error.message}`)
+        throw new InternalServerError(`Failed to send OTP: ${error.message}`);
       }
 
       return NextResponse.json({
         success: true,
-        message: 'Magic link sent to your email'
-      })
+        message: "OTP sent to your email",
+      });
     } else if (provider === 'google') {
       // Initiate Google OAuth flow
       const { data, error } = await supabase.auth.signInWithOAuth({

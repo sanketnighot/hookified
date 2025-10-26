@@ -10,15 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  generateFunctionSignature,
-  getWriteFunctions,
-} from "@/lib/blockchain/abiParser";
+import { getWriteFunctions } from "@/lib/blockchain/abiParser";
 import { SUPPORTED_CHAINS, getChainById } from "@/lib/blockchain/chainConfig";
 import {
   ContractTemplate,
   PresetFunction,
 } from "@/lib/blockchain/contractTemplates";
+import { getFunctionDescription } from "@/lib/blockchain/functionDescriptions";
 import { ActionConfig } from "@/lib/types";
 import {
   AlertCircle,
@@ -87,7 +85,21 @@ export function ContractCallActionForm({
     };
 
     if (isNativeTransfer) {
-      newConfig.parameters = [recipientAddress, transferAmount];
+      // Convert human-readable amount to wei (18 decimals)
+      const convertToWei = (amount: string): string => {
+        if (!amount || amount === "0") return "0";
+        try {
+          const [whole, fractional = ""] = amount.split(".");
+          const paddedFractional = fractional.padEnd(18, "0").slice(0, 18);
+          const weiValue =
+            BigInt(whole) * BigInt(10 ** 18) + BigInt(paddedFractional);
+          return weiValue.toString();
+        } catch {
+          return amount;
+        }
+      };
+
+      newConfig.parameters = [recipientAddress, convertToWei(transferAmount)];
     }
 
     onChange(newConfig);
@@ -389,7 +401,8 @@ export function ContractCallActionForm({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Amount to transfer in {selectedChain?.nativeCurrency.symbol}
+              Amount to transfer in {selectedChain?.nativeCurrency.symbol}{" "}
+              (e.g., 0.1 = 0.1 {selectedChain?.nativeCurrency.symbol})
             </p>
           </div>
         </div>
@@ -412,23 +425,71 @@ export function ContractCallActionForm({
               <SelectTrigger className="glass">
                 <SelectValue placeholder="Select function..." />
               </SelectTrigger>
-              <SelectContent>
-                {writeFunctions.map((func) => (
-                  <SelectItem key={func.name} value={func.name}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{func.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {generateFunctionSignature(func)}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
+              <SelectContent className="max-h-[300px]">
+                {writeFunctions.map((func) => {
+                  // Show simplified signature in dropdown
+                  const params = func.inputs
+                    .map((input) => input.name || input.type)
+                    .join(", ");
+                  const isSelected = selectedFunction === func.name;
+
+                  return (
+                    <SelectItem
+                      key={func.name}
+                      value={func.name}
+                      className={`cursor-pointer transition-all ${
+                        isSelected
+                          ? "bg-blue-500/20 border-l-2 border-blue-400"
+                          : "hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <span
+                          className={`font-medium ${
+                            isSelected ? "text-blue-300" : ""
+                          }`}
+                        >
+                          {func.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex-1">
+                          ({params})
+                        </span>
+                        {isSelected && (
+                          <CheckCircle className="w-4 h-4 text-blue-400 shrink-0" />
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Select the function to execute
+              Choose what action to perform on the contract
             </p>
           </div>
+
+          {/* Function Description Card */}
+          {selectedFunc &&
+            (() => {
+              const description = getFunctionDescription(selectedFunc.name);
+              if (!description) return null;
+
+              return (
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-blue-300 mb-1">
+                        {description.description}
+                      </p>
+                      <p className="text-xs text-blue-400/70">
+                        {description.example}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
           {/* Function Parameters */}
           {selectedFunc && (
