@@ -16,23 +16,23 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   try {
     // 1. Verify CRON_SECRET
-    const cronSecret = req.headers.get('x-cron-secret');
+    const cronSecret = req.headers.get("x-cron-secret");
     const expectedSecret = getCronConfig().secret;
 
     if (!cronSecret || cronSecret !== expectedSecret) {
       console.error(`Invalid cron secret for hook ${hookId}`);
       return NextResponse.json(
-        { error: 'Unauthorized: Invalid cron secret' },
+        { error: "Unauthorized: Invalid cron secret" },
         { status: 401 }
       );
     }
 
     // 2. Verify Supabase service role authentication (optional additional security)
-    const authHeader = req.headers.get('authorization');
-    if (authHeader && !authHeader.startsWith('Bearer ')) {
+    const authHeader = req.headers.get("authorization");
+    if (authHeader && !authHeader.startsWith("Bearer ")) {
       console.error(`Invalid authorization header for hook ${hookId}`);
       return NextResponse.json(
-        { error: 'Unauthorized: Invalid authorization header' },
+        { error: "Unauthorized: Invalid authorization header" },
         { status: 401 }
       );
     }
@@ -40,29 +40,45 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // 3. Fetch and validate the hook
     const hook = await prisma.hook.findUnique({
       where: { id: hookId },
+      select: {
+        id: true,
+        userId: true,
+        name: true,
+        description: true,
+        triggerType: true,
+        triggerConfig: true,
+        actionConfig: true,
+        actions: true, // Explicitly select actions
+        status: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        lastExecutedAt: true,
+        lastCheckedAt: true,
+        lastProcessedBlock: true,
+        alchemyWebhookId: true,
+      },
     });
 
     if (!hook) {
       console.error(`Hook ${hookId} not found`);
-      return NextResponse.json(
-        { error: 'Hook not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Hook not found" }, { status: 404 });
     }
 
     // 4. Check if hook is active and has CRON trigger type
-    if (!hook.isActive || hook.status !== 'ACTIVE') {
-      console.log(`Hook ${hookId} is not active (isActive: ${hook.isActive}, status: ${hook.status})`);
+    if (!hook.isActive || hook.status !== "ACTIVE") {
       return NextResponse.json(
-        { error: 'Hook is not active' },
+        { error: "Hook is not active" },
         { status: 400 }
       );
     }
 
-    if (hook.triggerType !== 'CRON') {
-      console.error(`Hook ${hookId} is not a CRON trigger (type: ${hook.triggerType})`);
+    if (hook.triggerType !== "CRON") {
+      console.error(
+        `Hook ${hookId} is not a CRON trigger (type: ${hook.triggerType})`
+      );
       return NextResponse.json(
-        { error: 'Hook is not a CRON trigger' },
+        { error: "Hook is not a CRON trigger" },
         { status: 400 }
       );
     }
@@ -70,12 +86,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // 5. Validate cron expression
     const triggerConfig = hook.triggerConfig as any;
     const cronExpression = triggerConfig?.cronExpression;
-    const timezone = triggerConfig?.timezone || 'UTC';
+    const timezone = triggerConfig?.timezone || "UTC";
 
     if (!cronExpression) {
       console.error(`Hook ${hookId} has no cron expression`);
       return NextResponse.json(
-        { error: 'Hook has no cron expression' },
+        { error: "Hook has no cron expression" },
         { status: 400 }
       );
     }
@@ -83,7 +99,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // 6. Create trigger context
     const now = new Date();
     const triggerContext: TriggerContext = {
-      type: 'CRON',
+      type: "CRON",
       data: {
         cronExpression,
         timezone,
@@ -95,7 +111,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     };
 
     // 7. Execute the hook
-    console.log(`Executing CRON hook: ${hook.name} (${hook.id})`);
 
     const executor = new HookExecutor();
 
@@ -112,7 +127,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       actions: hook.actions as any,
     };
 
-    const executionResult = await executor.executeHook(hookForExecution, triggerContext);
+    const executionResult = await executor.executeHook(
+      hookForExecution,
+      triggerContext
+    );
 
     // 8. Update last execution time
     await prisma.hook.update({
@@ -123,16 +141,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       },
     });
 
-    console.log(`CRON hook ${hookId} executed successfully`);
-
     return NextResponse.json({
       success: true,
-      message: 'Hook executed successfully',
+      message: "Hook executed successfully",
       hookId,
       executionTime: now.toISOString(),
       result: executionResult,
     });
-
   } catch (error: any) {
     console.error(`Error executing CRON hook ${hookId}:`, error);
 

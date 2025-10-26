@@ -44,6 +44,7 @@ export interface AppConfig {
 
   cron: {
     secret: string;
+    url: string;
   };
 
   // Block Explorer APIs (single API key for all Etherscan-compatible explorers)
@@ -112,6 +113,10 @@ function loadConfig(): AppConfig {
     },
     cron: {
       secret: requiredVars.CRON_SECRET || "default-cron-secret",
+      url:
+        requiredVars.NEXT_PUBLIC_APP_URL === "http://localhost:3000"
+          ? "https://3000.sx100.xyz"
+          : requiredVars.NEXT_PUBLIC_APP_URL || "https://3000.sx100.xyz",
     },
     etherscan: {
       apiKey: process.env.ETHERSCAN_API_KEY || "",

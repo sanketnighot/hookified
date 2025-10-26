@@ -14,14 +14,6 @@ import { HookCardProps } from "./HookCard.types";
 export function HookCard({ hook, onToggle }: HookCardProps) {
   const [running, setRunning] = useState(false);
 
-  // Debug log
-  console.log("HookCard rendering:", {
-    id: hook.id,
-    name: hook.name,
-    actions: hook.actions,
-    actionConfig: hook.actionConfig,
-  });
-
   const handleRunNow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();

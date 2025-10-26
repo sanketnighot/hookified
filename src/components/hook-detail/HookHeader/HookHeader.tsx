@@ -69,7 +69,6 @@ export function HookHeader({ hook, onUpdate }: HookHeaderProps) {
       const response = await fetch(`/api/hooks/${hook.id}`, {
         method: "DELETE",
       });
-
       if (!response.ok) {
         throw new Error("Failed to delete hook");
       }

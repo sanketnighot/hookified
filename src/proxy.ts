@@ -41,13 +41,14 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith(route)
   );
 
-  // API routes that need protection (exclude auth routes, test routes, and webhook routes)
+  // API routes that need protection (exclude auth routes, test routes, webhook routes, and cron routes)
   const isProtectedApiRoute =
     request.nextUrl.pathname.startsWith("/api") &&
     !request.nextUrl.pathname.startsWith("/api/auth") &&
     !request.nextUrl.pathname.startsWith("/api/test") &&
     !request.nextUrl.pathname.startsWith("/api/debug") &&
-    !request.nextUrl.pathname.startsWith("/api/webhooks");
+    !request.nextUrl.pathname.startsWith("/api/webhooks") &&
+    !request.nextUrl.pathname.startsWith("/api/cron");
 
   if ((isProtectedRoute || isProtectedApiRoute) && (!session || error)) {
     // Redirect to home page with redirectTo parameter

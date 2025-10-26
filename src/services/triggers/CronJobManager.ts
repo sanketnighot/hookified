@@ -1,5 +1,5 @@
-import { getAppConfig, getCronConfig } from '@/lib/config';
-import { createClient } from '@supabase/supabase-js';
+import { getCronConfig } from "@/lib/config";
+import { createClient } from "@supabase/supabase-js";
 
 export interface CronJobStatus {
   exists: boolean;
@@ -15,7 +15,7 @@ export class CronJobManager {
 
   constructor() {
     this.cronSecret = getCronConfig().secret;
-    this.appUrl = getAppConfig().url;
+    this.appUrl = getCronConfig().url;
 
     // Create Supabase client with service role key for database operations
     this.supabase = createClient(
@@ -32,37 +32,126 @@ export class CronJobManager {
     const endpoint = `${this.appUrl}/api/cron/execute/${hookId}`;
 
     try {
-      console.log(`Creating Supabase cron job for hook ${hookId} with schedule: ${cronExpression}`);
+      // First, check if job already exists
+      const existingStatus = await this.getCronJobStatus(hookId);
+      if (existingStatus.exists) {
+        await this.updateCronJobSchedule(hookId, cronExpression);
+        return;
+      }
 
       // Create the cron job using pg_cron
-      const { data, error } = await this.supabase.rpc('exec_sql', {
+      // cron.schedule returns a bigint jobid, we need to wrap it properly
+      const { data, error } = await this.supabase.rpc("exec_sql", {
         query: `
-          SELECT cron.schedule(
+          SELECT json_build_object('jobid', cron.schedule(
             '${jobName}',
             '${cronExpression}',
             $$
               SELECT net.http_post(
                 url := '${endpoint}',
-                headers := '{"Content-Type": "application/json", "x-cron-secret": "${this.cronSecret}"}'::jsonb,
-                body := '{}'::jsonb
+                headers := jsonb_build_object(
+                  'Content-Type', 'application/json',
+                  'x-cron-secret', '${this.cronSecret}'
+                ),
+                body := jsonb_build_object('cronSecret', '${this.cronSecret}')
               ) as request_id;
             $$
-          );
-        `
+          ));
+        `,
       } as any);
 
       if (error) {
-        console.error('Supabase RPC error:', error);
-        throw new Error(`Failed to create cron job: ${error.message}`);
+        console.error("Supabase RPC error:", error);
+        console.error("Full error details:", JSON.stringify(error, null, 2));
+        throw this.createDetailedError(error);
       }
 
-      console.log('Cron job creation response:', data);
+      // Type assertion for data
+      const responseData = data as any;
 
-      console.log(`Successfully created Supabase cron job: ${jobName}`);
+      // Verify the job was created by checking the cron.job table
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second for consistency
+      const status = await this.getCronJobStatus(hookId);
+
+      if (!status.exists) {
+        console.error("Verification failed: Job not found in cron.job table");
+        console.error("Response data:", responseData);
+        throw new Error(
+          "CRON job was not created successfully. The job ID was returned but the job is not found in cron.job table."
+        );
+      }
+
+      // Extract job ID from response
+      let jobId: string | null = null;
+      if (
+        responseData &&
+        Array.isArray(responseData) &&
+        responseData.length > 0
+      ) {
+        const firstItem = responseData[0];
+        jobId = firstItem?.jobid?.toString() || null;
+      }
     } catch (error) {
       console.error(`Failed to create cron job for hook ${hookId}:`, error);
-      throw new Error(`Failed to create cron job: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Re-throw with enhanced error details
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
+      // Check for specific setup issues
+      if (
+        errorMessage.includes("exec_sql") ||
+        errorMessage.includes("function")
+      ) {
+        throw new Error(
+          "CRON scheduling unavailable: exec_sql function not found. Please run the setup script: supabase-cron-jobs-setup.sql"
+        );
+      }
+
+      if (
+        errorMessage.includes("pg_cron") ||
+        errorMessage.includes("extension")
+      ) {
+        throw new Error(
+          "CRON scheduling unavailable: pg_cron extension not enabled. Enable it in your Supabase dashboard."
+        );
+      }
+
+      if (errorMessage.includes("http")) {
+        throw new Error(
+          "CRON scheduling unavailable: http extension not enabled. Enable it in your Supabase dashboard."
+        );
+      }
+
+      throw new Error(`Failed to create cron job: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Create detailed error from Supabase RPC error
+   */
+  private createDetailedError(error: any): Error {
+    const message = error?.message || "Unknown error";
+
+    // Common error patterns
+    if (message.includes("permission denied")) {
+      return new Error("CRON scheduling unavailable: insufficient permissions");
+    }
+
+    if (message.includes("does not exist")) {
+      if (message.includes("exec_sql")) {
+        return new Error(
+          "CRON scheduling unavailable: exec_sql function not found"
+        );
+      }
+      if (message.includes("cron.")) {
+        return new Error(
+          "CRON scheduling unavailable: pg_cron extension not enabled"
+        );
+      }
+    }
+
+    return new Error(`CRON scheduling unavailable: ${message}`);
   }
 
   /**
@@ -72,25 +161,25 @@ export class CronJobManager {
     const jobName = `hook_${hookId}`;
 
     try {
-      console.log(`Pausing Supabase cron job for hook ${hookId}`);
-
-      const { error } = await this.supabase.rpc('exec_sql', {
+      const { error } = await this.supabase.rpc("exec_sql", {
         query: `
           SELECT cron.alter_job(
             job_id := (SELECT jobid FROM cron.job WHERE jobname = '${jobName}'),
             active := false
           );
-        `
+        `,
       } as any);
 
       if (error) {
         throw new Error(`Failed to pause cron job: ${error.message}`);
       }
-
-      console.log(`Successfully paused Supabase cron job: ${jobName}`);
     } catch (error) {
       console.error(`Failed to pause cron job for hook ${hookId}:`, error);
-      throw new Error(`Failed to pause cron job: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to pause cron job: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -101,25 +190,25 @@ export class CronJobManager {
     const jobName = `hook_${hookId}`;
 
     try {
-      console.log(`Resuming Supabase cron job for hook ${hookId}`);
-
-      const { error } = await this.supabase.rpc('exec_sql', {
+      const { error } = await this.supabase.rpc("exec_sql", {
         query: `
           SELECT cron.alter_job(
             job_id := (SELECT jobid FROM cron.job WHERE jobname = '${jobName}'),
             active := true
           );
-        `
+        `,
       } as any);
 
       if (error) {
         throw new Error(`Failed to resume cron job: ${error.message}`);
       }
-
-      console.log(`Successfully resumed Supabase cron job: ${jobName}`);
     } catch (error) {
       console.error(`Failed to resume cron job for hook ${hookId}:`, error);
-      throw new Error(`Failed to resume cron job: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to resume cron job: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -130,51 +219,57 @@ export class CronJobManager {
     const jobName = `hook_${hookId}`;
 
     try {
-      console.log(`Deleting Supabase cron job for hook ${hookId}`);
-
-      const { error } = await this.supabase.rpc('exec_sql', {
+      const { error } = await this.supabase.rpc("exec_sql", {
         query: `
           SELECT cron.unschedule('${jobName}');
-        `
+        `,
       } as any);
 
       if (error) {
         throw new Error(`Failed to delete cron job: ${error.message}`);
       }
-
-      console.log(`Successfully deleted Supabase cron job: ${jobName}`);
     } catch (error) {
       console.error(`Failed to delete cron job for hook ${hookId}:`, error);
-      throw new Error(`Failed to delete cron job: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to delete cron job: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
   /**
    * Update a Supabase cron job's schedule
    */
-  async updateCronJobSchedule(hookId: string, cronExpression: string): Promise<void> {
+  async updateCronJobSchedule(
+    hookId: string,
+    cronExpression: string
+  ): Promise<void> {
     const jobName = `hook_${hookId}`;
 
     try {
-      console.log(`Updating Supabase cron job schedule for hook ${hookId} to: ${cronExpression}`);
-
-      const { error } = await this.supabase.rpc('exec_sql', {
+      const { error } = await this.supabase.rpc("exec_sql", {
         query: `
           SELECT cron.alter_job(
             job_id := (SELECT jobid FROM cron.job WHERE jobname = '${jobName}'),
             schedule := '${cronExpression}'
           );
-        `
+        `,
       } as any);
 
       if (error) {
         throw new Error(`Failed to update cron job schedule: ${error.message}`);
       }
-
-      console.log(`Successfully updated Supabase cron job schedule: ${jobName}`);
     } catch (error) {
-      console.error(`Failed to update cron job schedule for hook ${hookId}:`, error);
-      throw new Error(`Failed to update cron job schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(
+        `Failed to update cron job schedule for hook ${hookId}:`,
+        error
+      );
+      throw new Error(
+        `Failed to update cron job schedule: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -185,12 +280,12 @@ export class CronJobManager {
     const jobName = `hook_${hookId}`;
 
     try {
-      const { data, error } = await this.supabase.rpc('exec_sql', {
+      const { data, error } = await this.supabase.rpc("exec_sql", {
         query: `
           SELECT jobname, schedule, active
           FROM cron.job
           WHERE jobname = '${jobName}';
-        `
+        `,
       } as any);
 
       if (error || !data) {
@@ -220,23 +315,23 @@ export class CronJobManager {
    */
   async listAllCronJobs(): Promise<any[]> {
     try {
-      const { data, error } = await this.supabase.rpc('exec_sql', {
+      const { data, error } = await this.supabase.rpc("exec_sql", {
         query: `
           SELECT jobid, jobname, schedule, active, created_at
           FROM cron.job
           WHERE jobname LIKE 'hook_%'
           ORDER BY created_at DESC;
-        `
+        `,
       } as any);
 
       if (error) {
-        console.error('Failed to list cron jobs:', error);
+        console.error("Failed to list cron jobs:", error);
         return [];
       }
 
       return (data as any[]) || [];
     } catch (error) {
-      console.error('Failed to list cron jobs:', error);
+      console.error("Failed to list cron jobs:", error);
       return [];
     }
   }

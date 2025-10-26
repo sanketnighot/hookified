@@ -55,8 +55,6 @@ export class OnchainEngine {
         where: { id: hook.id },
         data: { alchemyWebhookId: webhookId },
       });
-
-      console.log(`Registered Alchemy webhook ${webhookId} for hook ${hook.id}`);
       return webhookId;
     } catch (error) {
       console.error(`Failed to register Alchemy webhook for hook ${hook.id}:`, error);
@@ -76,8 +74,6 @@ export class OnchainEngine {
       await axios.delete(
         `${alchemyConfig.baseUrl}/v2/${alchemyConfig.apiKey}/webhooks/${hook.alchemyWebhookId}`
       );
-
-      console.log(`Unregistered Alchemy webhook ${hook.alchemyWebhookId} for hook ${hook.id}`);
     } catch (error) {
       console.error(`Failed to unregister Alchemy webhook for hook ${hook.id}:`, error);
     }
@@ -116,8 +112,6 @@ export class OnchainEngine {
 
       // Execute the hook
       await this.executor.executeHook(hook as any, triggerContext);
-
-      console.log(`ONCHAIN hook ${hookId} executed successfully`);
     } catch (error) {
       console.error(`Error handling Alchemy webhook for hook ${hookId}:`, error);
     }

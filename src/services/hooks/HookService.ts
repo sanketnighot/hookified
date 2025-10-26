@@ -81,40 +81,28 @@ export class HookService {
 
     // Create cron job for CRON triggers
     if (data.triggerType === "CRON") {
+      const triggerConfig = data.triggerConfig as any;
+      const cronExpression = triggerConfig?.cronExpression;
+
+      if (!cronExpression) {
+        throw new Error(
+          "CRON trigger requires a cronExpression in triggerConfig"
+        );
+      }
+
       try {
-        const triggerConfig = data.triggerConfig as any;
-        const cronExpression = triggerConfig?.cronExpression;
-
-        if (cronExpression) {
-          await this.cronJobManager.createCronJob(hook.id, cronExpression);
-          console.log(`Successfully created cron job for hook ${hook.id}`);
-        } else {
-          console.warn(
-            `Hook ${hook.id} has CRON trigger type but no cron expression`
-          );
-        }
+        // Attempt to create the cron job in Supabase
+        await this.cronJobManager.createCronJob(hook.id, cronExpression);
       } catch (error) {
-        console.error(`Failed to create cron job for hook ${hook.id}:`, error);
+        // If cron job creation fails, we need to delete the hook that was just created
+        // to maintain data consistency
+        await prisma.hook.delete({ where: { id: hook.id } });
 
-        // Check if it's a setup issue
-        if (
-          error instanceof Error &&
-          error.message.includes("pg_cron extension")
-        ) {
-          console.warn(
-            "CRON scheduling disabled: pg_cron extension not available. Please run the setup script."
-          );
-        } else if (
-          error instanceof Error &&
-          error.message.includes("exec_sql function")
-        ) {
-          console.warn(
-            "CRON scheduling disabled: exec_sql function not found. Please run the setup script."
-          );
-        }
+        // Re-throw with a user-friendly error message
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
 
-        // Don't fail the hook creation, just log the error
-        // The hook will be created but won't be scheduled until pg_cron is set up
+        throw new Error(`Cannot create CRON hook: ${errorMessage}`);
       }
     }
 
@@ -209,7 +197,6 @@ export class HookService {
 
         if (cronExpression) {
           await this.cronJobManager.updateCronJobSchedule(id, cronExpression);
-          console.log(`Successfully updated cron job schedule for hook ${id}`);
         }
       } catch (error) {
         console.error(
@@ -251,7 +238,6 @@ export class HookService {
     if (existingHook.triggerType === "CRON") {
       try {
         await this.cronJobManager.deleteCronJob(id);
-        console.log(`Successfully deleted cron job for hook ${id}`);
       } catch (error) {
         console.error(`Failed to delete cron job for hook ${id}:`, error);
         // Don't fail the deletion, just log the error
@@ -284,10 +270,8 @@ export class HookService {
       try {
         if (isActive) {
           await this.cronJobManager.resumeCronJob(id);
-          console.log(`Successfully resumed cron job for hook ${id}`);
         } else {
           await this.cronJobManager.pauseCronJob(id);
-          console.log(`Successfully paused cron job for hook ${id}`);
         }
       } catch (error) {
         console.error(

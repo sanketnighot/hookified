@@ -76,23 +76,43 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    if (error.message === 'Unauthorized: Authentication required') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error.message === "Unauthorized: Authentication required") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Validation errors
-    if (error.message.includes('validation failed')) {
+    if (error.message.includes("validation failed")) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Check if this is a CRON setup error
+    const errorMessage = error.message || "";
+    const isCronSetupError =
+      errorMessage.includes("CRON scheduling unavailable") ||
+      errorMessage.includes("exec_sql") ||
+      errorMessage.includes("pg_cron") ||
+      errorMessage.includes("Cannot create CRON hook");
+
+    if (isCronSetupError) {
       return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
+        {
+          error: "CRON scheduling is not available",
+          details: errorMessage,
+          type: "CRON_SETUP_ERROR",
+          instructions: [
+            "Contact your administrator to set up pg_cron in Supabase",
+            "Run the SQL in supabase-cron-jobs-setup.sql",
+            "Ensure pg_cron and http extensions are enabled",
+            "Verify CRON_SECRET and SUPABASE_SERVICE_ROLE_KEY are set",
+          ],
+          setupDocumentation: "/docs/CRON_SETUP_TROUBLESHOOTING.md",
+        },
+        { status: 503 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to create hook', details: error.message },
+      { error: "Failed to create hook", details: error.message },
       { status: 500 }
     );
   }

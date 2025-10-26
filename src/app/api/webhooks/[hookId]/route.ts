@@ -45,10 +45,6 @@ export async function POST(
     // Validate Content-Type
     const contentType = req.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: Invalid Content-Type from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -83,10 +79,6 @@ export async function POST(
     });
 
     if (!hook) {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: Hook not found from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -114,10 +106,6 @@ export async function POST(
 
     // Verify hook is active and has WEBHOOK trigger type
     if (!hook.isActive || hook.status !== "ACTIVE") {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: Hook is not active from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -147,10 +135,6 @@ export async function POST(
     }
 
     if (hook.triggerType !== "WEBHOOK") {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: Hook is not configured for webhook triggers from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -182,10 +166,6 @@ export async function POST(
     // Validate webhook secret
     const webhookSecret = (hook.triggerConfig as any)?.secret;
     if (!webhookSecret) {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: No secret configured from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -216,10 +196,6 @@ export async function POST(
 
     const providedSecret = req.headers.get("x-webhook-secret");
     if (!providedSecret) {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: Missing secret header from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -254,10 +230,6 @@ export async function POST(
     const providedSecretBuffer = Buffer.from(providedSecret, "utf8");
 
     if (webhookSecretBuffer.length !== providedSecretBuffer.length) {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: Secret length mismatch from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -287,10 +259,6 @@ export async function POST(
     }
 
     if (!crypto.timingSafeEqual(webhookSecretBuffer, providedSecretBuffer)) {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: Invalid secret from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -325,10 +293,6 @@ export async function POST(
       const body = await req.text();
       webhookPayload = JSON.parse(body);
     } catch (error) {
-      console.log(
-        `Webhook validation failed for hook ${hookId}: Invalid JSON payload from IP ${clientIP}`
-      );
-
       // Update HookRun with failure
       await prisma.hookRun.update({
         where: { id: runId },
@@ -384,10 +348,6 @@ export async function POST(
     });
 
     const processingTime = Date.now() - startTime;
-    console.log(
-      `Webhook accepted for hook ${hookId} from IP ${clientIP} in ${processingTime}ms`
-    );
-
     return NextResponse.json(
       {
         success: true,

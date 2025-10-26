@@ -363,10 +363,6 @@ class ABICachingServiceImpl implements ABICachingService {
           name: "Aave V3 Pool",
         },
       ];
-
-      // This would typically fetch ABIs from Etherscan and cache them
-      // For now, we'll just ensure they're in the database if they exist
-      console.log("Preloading popular contracts...");
     } catch (error) {
       console.error("Error preloading popular contracts:", error);
     }

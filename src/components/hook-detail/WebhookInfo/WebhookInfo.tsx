@@ -61,24 +61,18 @@ export function WebhookInfo({ hookId }: WebhookInfoProps) {
   const fetchRecentRuns = async () => {
     try {
       const timestamp = new Date().getTime();
-      const response = await fetch(`/api/runs?hookId=${hookId}&limit=10&_t=${timestamp}`);
+      const response = await fetch(
+        `/api/runs?hookId=${hookId}&limit=10&_t=${timestamp}`
+      );
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched recent runs data:', data); // Debug log
         setRecentRuns(data.runs || []);
       }
     } catch (error) {
-      console.error('Failed to fetch recent runs:', error);
+      console.error("Failed to fetch recent runs:", error);
     }
   };
 
-  const refreshData = async () => {
-    console.log('WebhookInfo refresh button clicked'); // Debug log
-    setRefreshKey(prev => prev + 1); // Force re-render
-    setIsRefreshing(true);
-    await Promise.all([fetchWebhookDetails(), fetchRecentRuns()]);
-    setIsRefreshing(false);
-  };
 
   useEffect(() => {
     const loadData = async () => {
