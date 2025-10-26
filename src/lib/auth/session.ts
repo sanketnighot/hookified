@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
-import type { User } from '@prisma/client'
+import type { User } from "../../generated/prisma";
 
 export async function getUser(): Promise<User | null> {
   const supabase = await createClient()
