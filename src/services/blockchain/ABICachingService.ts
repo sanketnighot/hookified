@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "../../generated/prisma";
 
 export interface CachedABI {
   contractAddress: string;
@@ -7,7 +7,7 @@ export interface CachedABI {
   contractName?: string;
   isVerified: boolean;
   lastFetched: Date;
-  source: 'etherscan' | 'database' | 'template';
+  source: "etherscan" | "database" | "template";
   metadata?: {
     compilerVersion?: string;
     sourceCodeUrl?: string;
@@ -25,7 +25,10 @@ export interface ABICacheStats {
 }
 
 export interface ABICachingService {
-  getCachedABI(contractAddress: string, chainId: number): Promise<CachedABI | null>;
+  getCachedABI(
+    contractAddress: string,
+    chainId: number
+  ): Promise<CachedABI | null>;
   setCachedABI(abi: CachedABI): Promise<void>;
   invalidateCache(contractAddress: string, chainId: number): Promise<void>;
   clearExpiredCache(maxAge?: number): Promise<number>;
@@ -58,7 +61,10 @@ class ABICachingServiceImpl implements ABICachingService {
     return Date.now() - abi.lastFetched.getTime() < this.DATABASE_CACHE_TTL;
   }
 
-  async getCachedABI(contractAddress: string, chainId: number): Promise<CachedABI | null> {
+  async getCachedABI(
+    contractAddress: string,
+    chainId: number
+  ): Promise<CachedABI | null> {
     const cacheKey = this.getCacheKey(contractAddress, chainId);
 
     // Check memory cache first
@@ -77,10 +83,13 @@ class ABICachingServiceImpl implements ABICachingService {
         },
       });
 
-      if (dbCached && this.isDatabaseCacheValid({
-        ...dbCached,
-        source: 'database' as const
-      } as CachedABI)) {
+      if (
+        dbCached &&
+        this.isDatabaseCacheValid({
+          ...dbCached,
+          source: "database" as const,
+        } as CachedABI)
+      ) {
         const cachedABI: CachedABI = {
           contractAddress: dbCached.contractAddress,
           chainId: dbCached.chainId,
@@ -88,7 +97,7 @@ class ABICachingServiceImpl implements ABICachingService {
           contractName: dbCached.contractName || undefined,
           isVerified: dbCached.isVerified,
           lastFetched: dbCached.lastFetched,
-          source: 'database',
+          source: "database",
           metadata: dbCached.metadata as any,
         };
 
@@ -102,7 +111,7 @@ class ABICachingServiceImpl implements ABICachingService {
       this.cacheMisses++;
       return null;
     } catch (error) {
-      console.error('Error fetching cached ABI from database:', error);
+      console.error("Error fetching cached ABI from database:", error);
       this.cacheMisses++;
       return null;
     }
@@ -141,11 +150,14 @@ class ABICachingServiceImpl implements ABICachingService {
         },
       });
     } catch (error) {
-      console.error('Error caching ABI:', error);
+      console.error("Error caching ABI:", error);
     }
   }
 
-  async invalidateCache(contractAddress: string, chainId: number): Promise<void> {
+  async invalidateCache(
+    contractAddress: string,
+    chainId: number
+  ): Promise<void> {
     const cacheKey = this.getCacheKey(contractAddress, chainId);
 
     try {
@@ -160,11 +172,13 @@ class ABICachingServiceImpl implements ABICachingService {
         },
       });
     } catch (error) {
-      console.error('Error invalidating cache:', error);
+      console.error("Error invalidating cache:", error);
     }
   }
 
-  async clearExpiredCache(maxAge: number = this.DATABASE_CACHE_TTL): Promise<number> {
+  async clearExpiredCache(
+    maxAge: number = this.DATABASE_CACHE_TTL
+  ): Promise<number> {
     const cutoffTime = new Date(Date.now() - maxAge);
     let deletedCount = 0;
 
@@ -187,7 +201,7 @@ class ABICachingServiceImpl implements ABICachingService {
 
       deletedCount = result.count;
     } catch (error) {
-      console.error('Error clearing expired cache:', error);
+      console.error("Error clearing expired cache:", error);
     }
 
     return deletedCount;
@@ -202,18 +216,19 @@ class ABICachingServiceImpl implements ABICachingService {
       const unverifiedContracts = totalCached - verifiedContracts;
 
       const oldestCache = await this.prisma.contractABI.findFirst({
-        orderBy: { lastFetched: 'asc' },
+        orderBy: { lastFetched: "asc" },
         select: { lastFetched: true },
       });
 
       const newestCache = await this.prisma.contractABI.findFirst({
-        orderBy: { lastFetched: 'desc' },
+        orderBy: { lastFetched: "desc" },
         select: { lastFetched: true },
       });
 
-      const cacheHitRate = this.cacheHits + this.cacheMisses > 0
-        ? (this.cacheHits / (this.cacheHits + this.cacheMisses)) * 100
-        : 0;
+      const cacheHitRate =
+        this.cacheHits + this.cacheMisses > 0
+          ? (this.cacheHits / (this.cacheHits + this.cacheMisses)) * 100
+          : 0;
 
       return {
         totalCached,
@@ -224,7 +239,7 @@ class ABICachingServiceImpl implements ABICachingService {
         cacheHitRate,
       };
     } catch (error) {
-      console.error('Error getting cache stats:', error);
+      console.error("Error getting cache stats:", error);
       return {
         totalCached: 0,
         verifiedContracts: 0,
@@ -240,7 +255,7 @@ class ABICachingServiceImpl implements ABICachingService {
     try {
       const whereClause: any = {
         OR: [
-          { contractName: { contains: query, mode: 'insensitive' } },
+          { contractName: { contains: query, mode: "insensitive" } },
           { contractAddress: { contains: query.toLowerCase() } },
         ],
       };
@@ -251,30 +266,30 @@ class ABICachingServiceImpl implements ABICachingService {
 
       const contracts = await this.prisma.contractABI.findMany({
         where: whereClause,
-        orderBy: [
-          { isVerified: 'desc' },
-          { lastFetched: 'desc' },
-        ],
+        orderBy: [{ isVerified: "desc" }, { lastFetched: "desc" }],
         take: 20,
       });
 
-      return contracts.map(contract => ({
+      return contracts.map((contract) => ({
         contractAddress: contract.contractAddress,
         chainId: contract.chainId,
         abi: contract.abi as any[],
         contractName: contract.contractName || undefined,
         isVerified: contract.isVerified,
         lastFetched: contract.lastFetched,
-        source: 'database' as const,
+        source: "database" as const,
         metadata: contract.metadata as any,
       }));
     } catch (error) {
-      console.error('Error searching contracts:', error);
+      console.error("Error searching contracts:", error);
       return [];
     }
   }
 
-  async getPopularContracts(chainId?: number, limit: number = 10): Promise<CachedABI[]> {
+  async getPopularContracts(
+    chainId?: number,
+    limit: number = 10
+  ): Promise<CachedABI[]> {
     try {
       const whereClause: any = {
         isVerified: true,
@@ -286,22 +301,22 @@ class ABICachingServiceImpl implements ABICachingService {
 
       const contracts = await this.prisma.contractABI.findMany({
         where: whereClause,
-        orderBy: { lastFetched: 'desc' },
+        orderBy: { lastFetched: "desc" },
         take: limit,
       });
 
-      return contracts.map(contract => ({
+      return contracts.map((contract) => ({
         contractAddress: contract.contractAddress,
         chainId: contract.chainId,
         abi: contract.abi as any[],
         contractName: contract.contractName || undefined,
         isVerified: contract.isVerified,
         lastFetched: contract.lastFetched,
-        source: 'database' as const,
+        source: "database" as const,
         metadata: contract.metadata as any,
       }));
     } catch (error) {
-      console.error('Error getting popular contracts:', error);
+      console.error("Error getting popular contracts:", error);
       return [];
     }
   }
@@ -327,17 +342,33 @@ class ABICachingServiceImpl implements ABICachingService {
     try {
       // Preload popular contracts for each chain
       const popularAddresses = [
-        { address: '0xA0b86a33E6441b8C4C8C0C4C8C0C4C8C0C4C8C0C', chainId: 1, name: 'USDC' },
-        { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', chainId: 1, name: 'USDT' },
-        { address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', chainId: 1, name: 'Uniswap V2 Router' },
-        { address: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2', chainId: 1, name: 'Aave V3 Pool' },
+        {
+          address: "0xA0b86a33E6441b8C4C8C0C4C8C0C4C8C0C4C8C0C",
+          chainId: 1,
+          name: "USDC",
+        },
+        {
+          address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+          chainId: 1,
+          name: "USDT",
+        },
+        {
+          address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+          chainId: 1,
+          name: "Uniswap V2 Router",
+        },
+        {
+          address: "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+          chainId: 1,
+          name: "Aave V3 Pool",
+        },
       ];
 
       // This would typically fetch ABIs from Etherscan and cache them
       // For now, we'll just ensure they're in the database if they exist
-      console.log('Preloading popular contracts...');
+      console.log("Preloading popular contracts...");
     } catch (error) {
-      console.error('Error preloading popular contracts:', error);
+      console.error("Error preloading popular contracts:", error);
     }
   }
 }
