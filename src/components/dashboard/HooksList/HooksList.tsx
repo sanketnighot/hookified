@@ -34,7 +34,6 @@ export function HooksList() {
   }, [fetchHooks]);
 
   // Debug log
-  console.log("HooksList rendering with hooks:", hooks.length, hooks);
 
   const handleToggle = async (hookId: string, isActive: boolean) => {
     try {

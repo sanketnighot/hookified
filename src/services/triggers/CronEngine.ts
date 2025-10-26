@@ -19,18 +19,14 @@ export class CronEngine {
 
   async checkAndExecuteCronHooks(): Promise<void> {
     try {
-      console.log('Checking CRON hooks...');
-
       // Fetch all active hooks with CRON trigger type
       const cronHooks = await prisma.hook.findMany({
         where: {
-          triggerType: 'CRON',
+          triggerType: "CRON",
           isActive: true,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         },
       });
-
-      console.log(`Found ${cronHooks.length} active CRON hooks`);
 
       for (const hook of cronHooks) {
         try {
@@ -39,10 +35,8 @@ export class CronEngine {
           console.error(`Error checking CRON hook ${hook.id}:`, error);
         }
       }
-
-      console.log('CRON check completed');
     } catch (error) {
-      console.error('CRON engine error:', error);
+      console.error("CRON engine error:", error);
     }
   }
 
@@ -86,11 +80,9 @@ export class CronEngine {
       }
 
       if (shouldExecute) {
-        console.log(`Executing CRON hook: ${hook.name} (${hook.id})`);
-
         // Create trigger context
         const triggerContext: TriggerContext = {
-          type: 'CRON',
+          type: "CRON",
           data: {
             cronExpression,
             timezone,
@@ -108,8 +100,6 @@ export class CronEngine {
           where: { id: hook.id },
           data: { lastCheckedAt: now },
         });
-
-        console.log(`CRON hook ${hook.id} executed successfully`);
       }
     } catch (error) {
       console.error(`Error parsing cron expression for hook ${hook.id}:`, error);

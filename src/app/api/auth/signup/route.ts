@@ -36,11 +36,11 @@ export async function POST(request: NextRequest) {
     } else if (provider === 'google') {
       // Initiate Google OAuth flow
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`
-        }
-      })
+          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/`,
+        },
+      });
 
       if (error) {
         throw new InternalServerError(`Failed to initiate Google OAuth: ${error.message}`)

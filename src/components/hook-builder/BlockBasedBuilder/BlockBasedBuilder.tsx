@@ -408,6 +408,29 @@ function BlockBasedBuilderContent() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Check if this is a CRON setup error
+        if (data.type === "CRON_SETUP_ERROR" && response.status === 503) {
+          // Show detailed CRON setup error
+          const instructions = data.instructions || [];
+          const instructionsHtml = instructions
+            .map(
+              (instruction: string, index: number) =>
+                `${index + 1}. ${instruction}`
+            )
+            .join("\n");
+
+          toast.error(
+            `CRON scheduling unavailable. Please contact your administrator to set up pg_cron.`,
+            {
+              description: instructionsHtml,
+              duration: 10000,
+            }
+          );
+
+          console.error("CRON setup error details:", data);
+          throw new Error(data.error || "CRON scheduling not available");
+        }
+
         throw new Error(
           data.error || `Failed to ${editHookId ? "update" : "create"} hook`
         );

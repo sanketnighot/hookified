@@ -29,12 +29,12 @@ export async function GET(request: NextRequest) {
             await UserService.createUser({
               supabaseId: data.user.id,
               email: data.user.email!,
-              name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || null,
+              name:
+                data.user.user_metadata?.full_name ||
+                data.user.user_metadata?.name ||
+                null,
               avatarUrl: data.user.user_metadata?.avatar_url || null,
-            })
-            console.log('User created in database:', data.user.email)
-          } else {
-            console.log('User already exists in database:', data.user.email)
+            });
           }
         } catch (dbError) {
           console.error('Database error during user registration:', dbError)

@@ -75,9 +75,6 @@ export async function POST(
       }
     });
 
-    // Log regeneration event for audit
-    console.log(`Webhook secret regenerated for hook ${id} by user ${user.id}`);
-
     return NextResponse.json({
       success: true,
       message: 'Webhook secret regenerated successfully',

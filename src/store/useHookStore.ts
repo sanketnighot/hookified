@@ -68,7 +68,6 @@ export const useHookStore = create<HookStore>((set, get) => ({
         throw new Error("Failed to fetch hooks");
       }
       const data = await response.json();
-      console.log("Fetched hooks data:", data);
       set({ hooks: data.hooks || [] });
     } catch (error) {
       console.error("Error fetching hooks:", error);

@@ -14,21 +14,26 @@ interface CronScheduleFieldProps {
   error?: string;
 }
 
-type ScheduleType = 'one-time' | 'repeat';
-type RepeatFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+type ScheduleType = "one-time" | "repeat";
+type RepeatFrequency = "daily" | "weekly" | "monthly" | "yearly";
 
-export function CronScheduleField({ value, onChange, error }: CronScheduleFieldProps) {
-  const [scheduleType, setScheduleType] = useState<ScheduleType>('repeat');
-  const [repeatFrequency, setRepeatFrequency] = useState<RepeatFrequency>('daily');
-  const [time, setTime] = useState('09:00');
-  const [date, setDate] = useState('');
-  const [dayOfWeek, setDayOfWeek] = useState('1'); // Monday
+export function CronScheduleField({
+  value,
+  onChange,
+  error,
+}: CronScheduleFieldProps) {
+  const [scheduleType, setScheduleType] = useState<ScheduleType>("repeat");
+  const [repeatFrequency, setRepeatFrequency] =
+    useState<RepeatFrequency>("daily");
+  const [time, setTime] = useState("09:00");
+  const [date, setDate] = useState("");
+  const [dayOfWeek, setDayOfWeek] = useState("1"); // Monday
   const [timezone] = useState(() => {
     // Detect user's timezone
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
     } catch {
-      return 'UTC';
+      return "UTC";
     }
   });
   const [initialized, setInitialized] = useState(false);
@@ -41,70 +46,83 @@ export function CronScheduleField({ value, onChange, error }: CronScheduleFieldP
         const [minute, hour, dayOfMonth, month, weekday] = cron;
 
         // Set time
-        setTime(`${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`);
+        setTime(`${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`);
 
         // Determine frequency
-        if (weekday !== '*') {
-          setRepeatFrequency('weekly');
+        if (weekday !== "*") {
+          setRepeatFrequency("weekly");
           setDayOfWeek(weekday);
-        } else if (dayOfMonth === '1' && month !== '*') {
-          if (month === '1') {
-            setRepeatFrequency('yearly');
+        } else if (dayOfMonth === "1" && month !== "*") {
+          if (month === "1") {
+            setRepeatFrequency("yearly");
           } else {
-            setRepeatFrequency('monthly');
+            setRepeatFrequency("monthly");
           }
         } else {
-          setRepeatFrequency('daily');
+          setRepeatFrequency("daily");
         }
       }
       setInitialized(true);
     }
   }, [value?.cronExpression, initialized]);
 
-  // Convert local time to UTC for cron expression
-  const convertToUTC = (localTime: string): { utcHours: number; utcMinutes: number } => {
-    // Create a date object with the local time
-    const localDate = new Date(`1970-01-01T${localTime}:00`);
-
-    // Get UTC hours and minutes
-    const utcHours = localDate.getUTCHours();
-    const utcMinutes = localDate.getUTCMinutes();
-
-    return { utcHours, utcMinutes };
+  // Convert local clock time (HH:mm in user's browser) to UTC parts
+  const convertToUTC = (
+    localTime: string
+  ): { utcHours: number; utcMinutes: number } => {
+    const [hours, minutes] = localTime.split(":");
+    const now = new Date();
+    // Build a Date on today's date at the provided local time
+    const local = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      parseInt(hours),
+      parseInt(minutes),
+      0,
+      0
+    );
+    return {
+      utcHours: local.getUTCHours(),
+      utcMinutes: local.getUTCMinutes(),
+    };
   };
 
   // Generate cron expression based on current settings
   useEffect(() => {
-    let cronExpression = '';
+    let cronExpression = "";
 
-    if (scheduleType === 'one-time') {
-      // For one-time, we still need a cron expression
-      // Use the date/time provided
+    if (scheduleType === "one-time") {
+      // Convert selected local datetime to UTC cron fields
       if (date && time) {
-        const [hours, minutes] = time.split(':');
-        const d = new Date(date);
-        d.setHours(parseInt(hours), parseInt(minutes));
-
-        // This is a workaround - cron doesn't support one-time
-        // We'll use a date that's very far in the past/future
-        const cronDate = new Date(d);
-        cronExpression = `${cronDate.getMinutes()} ${cronDate.getHours()} ${cronDate.getDate()} ${cronDate.getMonth() + 1} *`;
+        const [hours, minutes] = time.split(":");
+        const dLocal = new Date(date);
+        dLocal.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        const utcMin = dLocal.getUTCMinutes();
+        const utcHour = dLocal.getUTCHours();
+        const utcDay = dLocal.getUTCDate();
+        const utcMonth = dLocal.getUTCMonth() + 1;
+        cronExpression = `${utcMin} ${utcHour} ${utcDay} ${utcMonth} *`;
       }
     } else {
       // Repeat schedule - convert local time to UTC
       const { utcHours, utcMinutes } = convertToUTC(time);
 
+      console.log(
+        `Converting time ${time} in timezone ${timezone} to UTC: ${utcHours}:${utcMinutes}`
+      );
+
       switch (repeatFrequency) {
-        case 'daily':
+        case "daily":
           cronExpression = `${utcMinutes} ${utcHours} * * *`;
           break;
-        case 'weekly':
+        case "weekly":
           cronExpression = `${utcMinutes} ${utcHours} * * ${dayOfWeek}`;
           break;
-        case 'monthly':
+        case "monthly":
           cronExpression = `${utcMinutes} ${utcHours} 1 * *`;
           break;
-        case 'yearly':
+        case "yearly":
           cronExpression = `${utcMinutes} ${utcHours} 1 1 *`;
           break;
       }
@@ -117,28 +135,43 @@ export function CronScheduleField({ value, onChange, error }: CronScheduleFieldP
     }
 
     // Always call onChange for new values or when initialized
-    if (cronExpression && scheduleType === 'repeat') {
+    if (cronExpression && scheduleType === "repeat") {
       // For repeat schedules, we always have a valid cron expression
       const newValue = { cronExpression, timezone };
       onChange(newValue);
-    } else if (cronExpression && scheduleType === 'one-time') {
+    } else if (cronExpression && scheduleType === "one-time") {
       // For one-time, only call onChange if we have a date
       const newValue = { cronExpression, timezone };
       onChange(newValue);
-    } else if (scheduleType === 'repeat' && !initialized && !value?.cronExpression) {
+    } else if (
+      scheduleType === "repeat" &&
+      !initialized &&
+      !value?.cronExpression
+    ) {
       // Generate default on first render
       const newValue = { cronExpression, timezone };
       onChange(newValue);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scheduleType, repeatFrequency, time, date, dayOfWeek, timezone, initialized]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    scheduleType,
+    repeatFrequency,
+    time,
+    date,
+    dayOfWeek,
+    timezone,
+    initialized,
+  ]);
 
   return (
     <div className="space-y-4">
       {/* Schedule Type Selection */}
       <div className="space-y-2">
         <Label>Schedule Type</Label>
-        <Select value={scheduleType} onValueChange={(v) => setScheduleType(v as ScheduleType)}>
+        <Select
+          value={scheduleType}
+          onValueChange={(v) => setScheduleType(v as ScheduleType)}
+        >
           <SelectTrigger className="glass">
             <SelectValue />
           </SelectTrigger>
@@ -149,7 +182,7 @@ export function CronScheduleField({ value, onChange, error }: CronScheduleFieldP
         </Select>
       </div>
 
-      {scheduleType === 'one-time' ? (
+      {scheduleType === "one-time" ? (
         // One-time Event Fields
         <>
           <div className="space-y-2">
@@ -166,9 +199,9 @@ export function CronScheduleField({ value, onChange, error }: CronScheduleFieldP
                 // Extract time from datetime-local input
                 if (e.target.value) {
                   const localDateTime = e.target.value;
-                  const [datePart, timePart] = localDateTime.split('T');
+                  const [datePart, timePart] = localDateTime.split("T");
                   setDate(`${datePart}T${timePart}`);
-                  setTime(timePart || '09:00');
+                  setTime(timePart || "09:00");
                 }
               }}
               className="glass"
@@ -184,7 +217,10 @@ export function CronScheduleField({ value, onChange, error }: CronScheduleFieldP
           {/* Frequency Selection */}
           <div className="space-y-2">
             <Label>Repeat</Label>
-            <Select value={repeatFrequency} onValueChange={(v) => setRepeatFrequency(v as RepeatFrequency)}>
+            <Select
+              value={repeatFrequency}
+              onValueChange={(v) => setRepeatFrequency(v as RepeatFrequency)}
+            >
               <SelectTrigger className="glass">
                 <SelectValue />
               </SelectTrigger>
@@ -213,7 +249,7 @@ export function CronScheduleField({ value, onChange, error }: CronScheduleFieldP
           </div>
 
           {/* Day of Week Selection (for weekly) */}
-          {repeatFrequency === 'weekly' && (
+          {repeatFrequency === "weekly" && (
             <div className="space-y-2">
               <Label>Day of Week</Label>
               <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
@@ -245,14 +281,13 @@ export function CronScheduleField({ value, onChange, error }: CronScheduleFieldP
             <strong>Your Timezone:</strong> {timezone}
           </p>
           <p className="text-xs text-muted-foreground">
-            <strong>Local Time:</strong> {time} {scheduleType === 'repeat' ? `(${repeatFrequency})` : ''}
+            <strong>Local Time:</strong> {time}{" "}
+            {scheduleType === "repeat" ? `(${repeatFrequency})` : ""}
           </p>
         </div>
       )}
 
-      {error && (
-        <div className="text-xs text-red-400">{error}</div>
-      )}
+      {error && <div className="text-xs text-red-400">{error}</div>}
     </div>
   );
 }

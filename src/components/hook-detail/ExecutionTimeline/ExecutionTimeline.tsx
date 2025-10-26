@@ -59,13 +59,9 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
         throw new Error("Failed to fetch runs");
       }
       const data = await response.json();
-      console.log("Fetched runs data:", data); // Debug log
-      console.log("Previous runs count:", runs.length); // Debug log
-      console.log("New runs count:", data.runs?.length || 0); // Debug log
 
       // Force state update with a new array reference
       const newRuns = data.runs || [];
-      console.log("Setting new runs:", newRuns.length, "items");
       setRuns([...newRuns]); // Create new array reference
     } catch (error) {
       console.error("Failed to fetch runs:", error);
@@ -77,7 +73,6 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
   };
 
   const handleRefresh = () => {
-    console.log("Refresh button clicked"); // Debug log
     const now = Date.now();
     setLastRefreshTime(now);
     setRefreshKey((prev) => prev + 1); // Force re-render
@@ -85,9 +80,6 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
     // Test the test endpoint first
     fetch(`/api/test/runs?hookId=${hookId}&_t=${now}`)
       .then((res) => res.json())
-      .then((data) => {
-        console.log("Test endpoint response:", data);
-      })
       .catch((err) => {
         console.error("Test endpoint error:", err);
       });
@@ -98,11 +90,6 @@ export function ExecutionTimeline({ hookId }: ExecutionTimelineProps) {
   useEffect(() => {
     fetchRuns();
   }, [hookId]);
-
-  // Debug effect to monitor runs changes
-  useEffect(() => {
-    console.log("Runs state changed:", runs.length, "runs");
-  }, [runs]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
