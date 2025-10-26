@@ -157,34 +157,35 @@ export function TriggerBlock({
           </div>
         </CardHeader>
 
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <CardContent className="pt-0">
-              {renderConfigForm()}
-              {errors && errors.length > 0 && (
-                <div className="mt-4 p-3 rounded-md bg-red-500/10 border border-red-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm font-medium text-red-500">
-                      Configuration Issues
-                    </span>
-                  </div>
-                  <ul className="text-xs text-red-400 space-y-1">
-                    {errors.map((error, index) => (
-                      <li key={index}>• {error}</li>
-                    ))}
-                  </ul>
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{
+            height: isExpanded ? "auto" : 0,
+            opacity: isExpanded ? 1 : 0,
+          }}
+          transition={{ duration: 0.2 }}
+          className="overflow-hidden"
+          style={{ display: isExpanded ? "block" : "none" }}
+        >
+          <CardContent className="pt-0">
+            {renderConfigForm()}
+            {errors && errors.length > 0 && (
+              <div className="mt-4 p-3 rounded-md bg-red-500/10 border border-red-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <span className="text-sm font-medium text-red-500">
+                    Configuration Issues
+                  </span>
                 </div>
-              )}
-            </CardContent>
-          </motion.div>
-        )}
+                <ul className="text-xs text-red-400 space-y-1">
+                  {errors.map((error, index) => (
+                    <li key={index}>• {error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </motion.div>
       </Card>
     </motion.div>
   );

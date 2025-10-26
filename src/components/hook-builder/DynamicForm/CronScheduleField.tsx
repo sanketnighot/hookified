@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface CronScheduleFieldProps {
   value: {
@@ -15,19 +15,18 @@ interface CronScheduleFieldProps {
 }
 
 type ScheduleType = "one-time" | "repeat";
-type RepeatFrequency = "daily" | "weekly" | "monthly" | "yearly";
+type RepeatFrequency =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "yearly"
+  | "hourly"
+  | "every-5-min"
+  | "every-10-min"
+  | "every-15-min"
+  | "every-30-min";
 
-export function CronScheduleField({
-  value,
-  onChange,
-  error,
-}: CronScheduleFieldProps) {
-  const [scheduleType, setScheduleType] = useState<ScheduleType>("repeat");
-  const [repeatFrequency, setRepeatFrequency] =
-    useState<RepeatFrequency>("daily");
-  const [time, setTime] = useState("09:00");
-  const [date, setDate] = useState("");
-  const [dayOfWeek, setDayOfWeek] = useState("1"); // Monday
+export function CronScheduleField({ value, onChange, error }: CronScheduleFieldProps) {
   const [timezone] = useState(() => {
     // Detect user's timezone
     try {
@@ -36,35 +35,80 @@ export function CronScheduleField({
       return "UTC";
     }
   });
-  const [initialized, setInitialized] = useState(false);
 
-  // Parse existing cron expression when editing
-  useEffect(() => {
-    if (!initialized && value?.cronExpression) {
-      const cron = value.cronExpression.trim().split(/\s+/);
-      if (cron.length === 5) {
-        const [minute, hour, dayOfMonth, month, weekday] = cron;
+  // Parse cron expression to get current state
+  const parseCronExpression = (cronExpr: string) => {
+    const cron = cronExpr.trim().split(/\s+/);
+    if (cron.length !== 5) return null;
 
-        // Set time
-        setTime(`${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`);
+    const [minute, hour, dayOfMonth, month, weekday] = cron;
 
-        // Determine frequency
-        if (weekday !== "*") {
-          setRepeatFrequency("weekly");
-          setDayOfWeek(weekday);
-        } else if (dayOfMonth === "1" && month !== "*") {
-          if (month === "1") {
-            setRepeatFrequency("yearly");
-          } else {
-            setRepeatFrequency("monthly");
-          }
-        } else {
-          setRepeatFrequency("daily");
-        }
+    // Parse time
+    const time = `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+
+    // Determine frequency
+    let repeatFrequency: RepeatFrequency = "daily";
+    let dayOfWeek = "1";
+
+    if (minute.includes("/") || hour.includes("/")) {
+      // Custom intervals
+      if (minute === "*/5") {
+        repeatFrequency = "every-5-min";
+      } else if (minute === "*/10") {
+        repeatFrequency = "every-10-min";
+      } else if (minute === "*/15") {
+        repeatFrequency = "every-15-min";
+      } else if (minute === "*/30") {
+        repeatFrequency = "every-30-min";
+      } else if (minute === "0" && hour === "*") {
+        repeatFrequency = "hourly";
       }
-      setInitialized(true);
+    } else if (weekday !== "*") {
+      repeatFrequency = "weekly";
+      dayOfWeek = weekday;
+    } else if (dayOfMonth === "1" && month !== "*") {
+      if (month === "1") {
+        repeatFrequency = "yearly";
+      } else {
+        repeatFrequency = "monthly";
+      }
     }
-  }, [value?.cronExpression, initialized]);
+
+    return { time, repeatFrequency, dayOfWeek };
+  };
+
+  // Get initial state from value prop
+  const initialState = value?.cronExpression
+    ? parseCronExpression(value.cronExpression)
+    : null;
+
+  const [scheduleType, setScheduleType] = useState<ScheduleType>("repeat");
+  const [repeatFrequency, setRepeatFrequency] = useState<RepeatFrequency>(
+    initialState?.repeatFrequency || "daily"
+  );
+  const [time, setTime] = useState(initialState?.time || "09:00");
+  const [date, setDate] = useState("");
+  const [dayOfWeek, setDayOfWeek] = useState(initialState?.dayOfWeek || "1");
+
+  // Track the last cron expression we emitted to parent to avoid feedback loops
+  const lastEmittedCron = useRef<string>("");
+
+  // Update local state when value prop changes (e.g., from external source)
+  // But only if it's different from what we last emitted
+  useEffect(() => {
+    if (
+      value?.cronExpression &&
+      value.cronExpression !== lastEmittedCron.current
+    ) {
+      const parsed = parseCronExpression(value.cronExpression);
+      if (parsed) {
+        setTime(parsed.time);
+        setRepeatFrequency(parsed.repeatFrequency);
+        setDayOfWeek(parsed.dayOfWeek);
+        lastEmittedCron.current = value.cronExpression;
+      }
+    }
+  }, [value?.cronExpression]);
 
   // Convert local clock time (HH:mm in user's browser) to UTC parts
   const convertToUTC = (
@@ -107,12 +151,22 @@ export function CronScheduleField({
     } else {
       // Repeat schedule - convert local time to UTC
       const { utcHours, utcMinutes } = convertToUTC(time);
-
-      console.log(
-        `Converting time ${time} in timezone ${timezone} to UTC: ${utcHours}:${utcMinutes}`
-      );
-
       switch (repeatFrequency) {
+        case "every-5-min":
+          cronExpression = `*/5 * * * *`;
+          break;
+        case "every-10-min":
+          cronExpression = `*/10 * * * *`;
+          break;
+        case "every-15-min":
+          cronExpression = `*/15 * * * *`;
+          break;
+        case "every-30-min":
+          cronExpression = `*/30 * * * *`;
+          break;
+        case "hourly":
+          cronExpression = `0 * * * *`;
+          break;
         case "daily":
           cronExpression = `${utcMinutes} ${utcHours} * * *`;
           break;
@@ -128,40 +182,22 @@ export function CronScheduleField({
       }
     }
 
-    // Don't call onChange if we're still initializing from existing value
-    if (!initialized && value?.cronExpression) {
-      // Wait for initialization to complete
-      return;
+    // Only call onChange if the generated cron expression is different from what we last emitted
+    // This prevents unnecessary updates and feedback loops
+    if (cronExpression && cronExpression !== lastEmittedCron.current) {
+      if (scheduleType === "repeat") {
+        // For repeat schedules, we always have a valid cron expression
+        const newValue = { cronExpression, timezone };
+        onChange(newValue);
+        lastEmittedCron.current = cronExpression;
+      } else if (scheduleType === "one-time" && date) {
+        // For one-time, only call onChange if we have a date
+        const newValue = { cronExpression, timezone };
+        onChange(newValue);
+        lastEmittedCron.current = cronExpression;
+      }
     }
-
-    // Always call onChange for new values or when initialized
-    if (cronExpression && scheduleType === "repeat") {
-      // For repeat schedules, we always have a valid cron expression
-      const newValue = { cronExpression, timezone };
-      onChange(newValue);
-    } else if (cronExpression && scheduleType === "one-time") {
-      // For one-time, only call onChange if we have a date
-      const newValue = { cronExpression, timezone };
-      onChange(newValue);
-    } else if (
-      scheduleType === "repeat" &&
-      !initialized &&
-      !value?.cronExpression
-    ) {
-      // Generate default on first render
-      const newValue = { cronExpression, timezone };
-      onChange(newValue);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    scheduleType,
-    repeatFrequency,
-    time,
-    date,
-    dayOfWeek,
-    timezone,
-    initialized,
-  ]);
+  }, [scheduleType, repeatFrequency, time, date, dayOfWeek, timezone]);
 
   return (
     <div className="space-y-4">
@@ -225,6 +261,11 @@ export function CronScheduleField({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="every-5-min">Every 5 Minutes</SelectItem>
+                <SelectItem value="every-10-min">Every 10 Minutes</SelectItem>
+                <SelectItem value="every-15-min">Every 15 Minutes</SelectItem>
+                <SelectItem value="every-30-min">Every 30 Minutes</SelectItem>
+                <SelectItem value="hourly">Hourly</SelectItem>
                 <SelectItem value="daily">Daily</SelectItem>
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
@@ -233,20 +274,24 @@ export function CronScheduleField({
             </Select>
           </div>
 
-          {/* Time Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="time">
-              Time
-              <span className="text-red-400 ml-1">*</span>
-            </Label>
-            <Input
-              id="time"
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="glass"
-            />
-          </div>
+          {/* Time Selection - Only show for options that need a specific time */}
+          {["daily", "weekly", "monthly", "yearly"].includes(
+            repeatFrequency
+          ) && (
+            <div className="space-y-2">
+              <Label htmlFor="time">
+                Time
+                <span className="text-red-400 ml-1">*</span>
+              </Label>
+              <Input
+                id="time"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="glass"
+              />
+            </div>
+          )}
 
           {/* Day of Week Selection (for weekly) */}
           {repeatFrequency === "weekly" && (
@@ -281,8 +326,22 @@ export function CronScheduleField({
             <strong>Your Timezone:</strong> {timezone}
           </p>
           <p className="text-xs text-muted-foreground">
-            <strong>Local Time:</strong> {time}{" "}
-            {scheduleType === "repeat" ? `(${repeatFrequency})` : ""}
+            {scheduleType === "repeat" && <strong>Schedule:</strong>}
+            {scheduleType === "one-time" && (
+              <>
+                <strong>Local Time:</strong> {time}
+              </>
+            )}
+            {scheduleType === "repeat" && (
+              <>
+                {repeatFrequency
+                  .replace(/-/g, " ")
+                  .replace(/\b\w/g, (c) => c.toUpperCase())}
+                {["daily", "weekly", "monthly", "yearly"].includes(
+                  repeatFrequency
+                ) && ` at ${time}`}
+              </>
+            )}
           </p>
         </div>
       )}

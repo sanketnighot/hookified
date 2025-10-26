@@ -127,15 +127,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       actions: hook.actions as any,
     };
 
-    console.log(`[CRON] Executing hook ${hookId}`);
-
     const executionResult = await executor.executeHook(
       hookForExecution,
       triggerContext
-    );
-
-    console.log(
-      `[CRON] Hook ${hookId} completed with status: ${executionResult.status}`
     );
 
     // 8. Update last execution time

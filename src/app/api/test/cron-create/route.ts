@@ -18,10 +18,6 @@ export async function POST(req: NextRequest) {
 
     const manager = new CronJobManager();
 
-    console.log('Attempting to create cron job...');
-    console.log('Hook ID:', hookId);
-    console.log('Cron Expression:', cronExpression);
-
     await manager.createCronJob(hookId, cronExpression);
 
     // Check if it was created
