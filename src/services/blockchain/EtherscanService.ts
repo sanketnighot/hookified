@@ -1,7 +1,4 @@
-import {
-  getEtherscanConfig,
-  isEtherscanConfigured
-} from '@/lib/config';
+import { getEtherscanConfig, isEtherscanConfigured } from "@/lib/config";
 import { ContractInfo } from '@/lib/types';
 import axios from 'axios';
 
@@ -152,8 +149,9 @@ export class EtherscanService {
     try {
       const response = await axios.get<ContractSourceResponse>(baseUrl, {
         params: {
-          module: 'contract',
-          action: 'getsourcecode',
+          chainid: chainId, // Required for API V2
+          module: "contract",
+          action: "getsourcecode",
           address: contractAddress,
           apikey: apiKey,
         },
