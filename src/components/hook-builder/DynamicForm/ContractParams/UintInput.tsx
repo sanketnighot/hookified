@@ -29,7 +29,37 @@ export function UintInput({
   tokenAddress,
   chainId
 }: UintInputProps) {
-  const [displayValue, setDisplayValue] = useState(value);
+  // Helper function to format raw uint256 to human-readable
+  const formatValue = (rawValue: string, customDecimals?: number) => {
+    if (!rawValue || rawValue === "0") return "0";
+    try {
+      // If it's already in human-readable format, return as-is
+      if (rawValue.includes(".")) return rawValue;
+
+      const decimalsToUse = customDecimals ?? decimals;
+      const bigIntValue = BigInt(rawValue);
+      const divisor = BigInt(10 ** decimalsToUse);
+      const wholePart = bigIntValue / divisor;
+      const fractionalPart = bigIntValue % divisor;
+
+      if (fractionalPart === BigInt(0)) {
+        return wholePart.toString();
+      }
+
+      const fractionalStr = fractionalPart
+        .toString()
+        .padStart(decimalsToUse, "0");
+      const trimmedFractional = fractionalStr.replace(/0+$/, "");
+      return `${wholePart}.${trimmedFractional}`;
+    } catch {
+      return rawValue;
+    }
+  };
+
+  // Convert initial raw value to human-readable format for display
+  const [displayValue, setDisplayValue] = useState(
+    formatValue(value, decimals)
+  );
   const [isValid, setIsValid] = useState(true);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [tokenMetadata, setTokenMetadata] = useState<{
@@ -41,15 +71,16 @@ export function UintInput({
   useEffect(() => {
     if (tokenAddress && chainId && !tokenSymbol) {
       setIsLoadingMetadata(true);
-      tokenMetadataService.fetchERC20Metadata(tokenAddress, chainId)
-        .then(metadata => {
+      tokenMetadataService
+        .fetchERC20Metadata(tokenAddress, chainId)
+        .then((metadata) => {
           setTokenMetadata({
             symbol: metadata.symbol,
-            decimals: metadata.decimals
+            decimals: metadata.decimals,
           });
         })
-        .catch(error => {
-          console.warn('Failed to fetch token metadata:', error);
+        .catch((error) => {
+          console.warn("Failed to fetch token metadata:", error);
         })
         .finally(() => {
           setIsLoadingMetadata(false);
@@ -73,38 +104,26 @@ export function UintInput({
 
   const handleChange = (newValue: string) => {
     setDisplayValue(newValue);
-    onChange(newValue);
   };
 
-  const formatWithDecimals = (rawValue: string) => {
-    if (!rawValue || rawValue === '0') return '0';
-
-    try {
-      const bigIntValue = BigInt(rawValue);
-      const divisor = BigInt(10 ** decimals);
-      const wholePart = bigIntValue / divisor;
-      const fractionalPart = bigIntValue % divisor;
-
-      if (fractionalPart === BigInt(0)) {
-        return wholePart.toString();
-      }
-
-      const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
-      const trimmedFractional = fractionalStr.replace(/0+$/, '');
-
-      return `${wholePart}.${trimmedFractional}`;
-    } catch {
-      return rawValue;
-    }
+  const handleBlur = () => {
+    // Convert human-readable amount to raw uint256 value on blur
+    const currentDecimals = tokenMetadata?.decimals || decimals;
+    const rawValue = parseToWei(displayValue, currentDecimals);
+    onChange(rawValue);
   };
 
-  const parseToWei = (displayValue: string) => {
-    if (!displayValue || displayValue === '0') return '0';
+  const parseToWei = (displayValue: string, customDecimals?: number) => {
+    if (!displayValue || displayValue === "0") return "0";
 
     try {
-      const [whole, fractional = ''] = displayValue.split('.');
-      const paddedFractional = fractional.padEnd(decimals, '0').slice(0, decimals);
-      const weiValue = BigInt(whole) * BigInt(10 ** decimals) + BigInt(paddedFractional);
+      const decimalsToUse = customDecimals ?? decimals;
+      const [whole, fractional = ""] = displayValue.split(".");
+      const paddedFractional = fractional
+        .padEnd(decimalsToUse, "0")
+        .slice(0, decimalsToUse);
+      const weiValue =
+        BigInt(whole) * BigInt(10 ** decimalsToUse) + BigInt(paddedFractional);
       return weiValue.toString();
     } catch {
       return displayValue;
@@ -116,13 +135,13 @@ export function UintInput({
       try {
         // This would need the user's wallet address - for now just set a reasonable default
         const balance = await tokenMetadataService.getTokenBalance(
-          '0x0000000000000000000000000000000000000000', // Placeholder - would need actual user address
+          "0x0000000000000000000000000000000000000000", // Placeholder - would need actual user address
           tokenAddress,
           chainId
         );
         handleChange(balance);
       } catch (error) {
-        console.warn('Failed to fetch token balance:', error);
+        console.warn("Failed to fetch token balance:", error);
       }
     }
   };
@@ -130,15 +149,16 @@ export function UintInput({
   const refreshMetadata = () => {
     if (tokenAddress && chainId) {
       setIsLoadingMetadata(true);
-      tokenMetadataService.fetchERC20Metadata(tokenAddress, chainId)
-        .then(metadata => {
+      tokenMetadataService
+        .fetchERC20Metadata(tokenAddress, chainId)
+        .then((metadata) => {
           setTokenMetadata({
             symbol: metadata.symbol,
-            decimals: metadata.decimals
+            decimals: metadata.decimals,
           });
         })
-        .catch(error => {
-          console.warn('Failed to fetch token metadata:', error);
+        .catch((error) => {
+          console.warn("Failed to fetch token metadata:", error);
         })
         .finally(() => {
           setIsLoadingMetadata(false);
@@ -146,22 +166,20 @@ export function UintInput({
     }
   };
 
-  const currentSymbol = tokenSymbol || tokenMetadata?.symbol || '';
+  const currentSymbol = tokenSymbol || tokenMetadata?.symbol || "";
   const currentDecimals = tokenMetadata?.decimals || decimals;
 
   return (
     <div className="space-y-2">
       <Label htmlFor={`param-${parameter.name}`}>
-        {parameter.name || 'Amount'}
+        {parameter.name || "Amount"}
         {parameter.name && (
           <span className="text-xs text-muted-foreground ml-2">
             ({parameter.type})
           </span>
         )}
         {currentSymbol && (
-          <span className="text-xs text-blue-400 ml-2">
-            ({currentSymbol})
-          </span>
+          <span className="text-xs text-blue-400 ml-2">({currentSymbol})</span>
         )}
         {tokenAddress && (
           <Button
@@ -187,7 +205,8 @@ export function UintInput({
           placeholder="0"
           value={displayValue}
           onChange={(e) => handleChange(e.target.value)}
-          className={`glass ${!isValid ? 'border-red-500' : ''}`}
+          onBlur={handleBlur}
+          className={`glass ${!isValid ? "border-red-500" : ""}`}
         />
         {currentSymbol && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
@@ -195,16 +214,14 @@ export function UintInput({
           </div>
         )}
       </div>
-      {error && (
-        <p className="text-xs text-red-500">{error}</p>
-      )}
+      {error && <p className="text-xs text-red-500">{error}</p>}
       {!isValid && value && (
         <p className="text-xs text-red-500">Invalid number format</p>
       )}
       <div className="flex gap-2">
         <Button
           type="button"
-          onClick={() => handleChange('0')}
+          onClick={() => handleChange("0")}
           className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20 transition-colors"
         >
           Clear
@@ -220,7 +237,11 @@ export function UintInput({
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        {currentDecimals > 0 ? `Enter amount (${currentDecimals} decimals)` : 'Enter numeric value'}
+        {currentSymbol
+          ? `Enter amount in ${currentSymbol} (e.g., 1 = 1 ${currentSymbol})`
+          : currentDecimals > 0
+          ? `Enter amount (will be converted to raw ${currentDecimals}-decimal unit)`
+          : "Enter numeric value"}
       </p>
     </div>
   );
