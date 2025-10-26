@@ -1,0 +1,6 @@
+{
+  "buildCommand": "bun run postinstall && next build",
+  "installCommand": "bun install",
+  "framework": "nextjs"
+}
+
