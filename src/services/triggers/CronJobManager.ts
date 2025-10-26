@@ -35,9 +35,6 @@ export class CronJobManager {
       // First, check if job already exists
       const existingStatus = await this.getCronJobStatus(hookId);
       if (existingStatus.exists) {
-        console.log(
-          `Cron job '${jobName}' already exists, updating schedule...`
-        );
         await this.updateCronJobSchedule(hookId, cronExpression);
         return;
       }
@@ -69,9 +66,6 @@ export class CronJobManager {
         throw this.createDetailedError(error);
       }
 
-      // Log the result
-      console.log("Cron job creation response:", { data: data as any, error });
-
       // Type assertion for data
       const responseData = data as any;
 
@@ -97,12 +91,6 @@ export class CronJobManager {
         const firstItem = responseData[0];
         jobId = firstItem?.jobid?.toString() || null;
       }
-
-      console.log(
-        `✅ Created cron job '${jobName}' with schedule '${cronExpression}'${
-          jobId ? ` (Job ID: ${jobId})` : ""
-        }`
-      );
     } catch (error) {
       console.error(`Failed to create cron job for hook ${hookId}:`, error);
 

@@ -35,9 +35,7 @@ export async function checkCronSetup(): Promise<boolean> {
     if (!isValid) {
       console.warn('⚠️  CRON scheduling is not available');
       console.warn('   CRON hooks will not execute until pg_cron is configured');
-      console.warn('   Run the setup script: supabase-cron-jobs-setup.sql');
-    } else {
-      console.log('✅ CRON scheduling is available');
+      console.warn("   Run the setup script: supabase-cron-jobs-setup.sql");
     }
 
     return isValid;
