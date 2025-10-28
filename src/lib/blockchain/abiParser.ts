@@ -258,6 +258,31 @@ export function getParameterPlaceholder(param: InputParameter): string {
 }
 
 /**
+ * Get event parameters from ABI event definition
+ */
+export function getEventParameters(event: any): any[] {
+  return event.inputs || [];
+}
+
+/**
+ * Get indexed parameters from event ABI
+ */
+export function getIndexedParameters(event: any): any[] {
+  return (event.inputs || []).filter((input: any) => input.indexed);
+}
+
+/**
+ * Generate event signature from ABI definition
+ */
+export function generateEventSignatureFromABI(event: any): string {
+  if (!event || !event.inputs) {
+    return `${event?.name || 'Unknown'}(...)`;
+  }
+  const params = event.inputs.map((i: any) => i.type).join(',');
+  return `${event.name}(${params})`;
+}
+
+/**
  * Get parameter description based on common patterns
  */
 export function getParameterDescription(param: InputParameter, functionName: string): string {

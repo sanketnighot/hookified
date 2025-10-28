@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { DynamicForm } from "../DynamicForm";
+import { OnchainTriggerForm } from "./ConfigForms/OnchainTriggerForm";
 
 const TRIGGER_ICONS = {
   ONCHAIN: Blocks,
@@ -52,7 +53,13 @@ export function TriggerBlock({
   };
 
   const handleConfigChange = (newValues: any) => {
-    onChange(triggerType, { ...triggerConfig, ...newValues });
+    // For ONCHAIN, newValues is already a complete TriggerConfig
+    // For other triggers using DynamicForm, newValues is a partial config
+    if (triggerType === "ONCHAIN") {
+      onChange(triggerType, newValues);
+    } else {
+      onChange(triggerType, { ...triggerConfig, ...newValues });
+    }
   };
 
   const renderConfigForm = () => {
@@ -61,6 +68,16 @@ export function TriggerBlock({
         <div className="p-4 text-center text-muted-foreground">
           <p>Select a trigger type to configure.</p>
         </div>
+      );
+    }
+
+    // Use custom form for ONCHAIN triggers
+    if (triggerType === "ONCHAIN") {
+      return (
+        <OnchainTriggerForm
+          config={triggerConfig}
+          onChange={handleConfigChange}
+        />
       );
     }
 

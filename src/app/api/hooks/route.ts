@@ -80,6 +80,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Handle ONCHAIN webhook registration failures
+    if (error.message?.includes("Failed to create ONCHAIN hook")) {
+      return NextResponse.json(
+        {
+          error: "Failed to create hook",
+          message: error.message,
+          details:
+            "The hook could not be created because webhook registration with Alchemy failed.",
+        },
+        { status: 400 }
+      );
+    }
+
     // Validation errors
     if (error.message.includes("validation failed")) {
       return NextResponse.json({ error: error.message }, { status: 400 });

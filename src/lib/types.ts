@@ -47,10 +47,14 @@ export type RunStatus = "PENDING" | "SUCCESS" | "FAILED";
 
 export interface TriggerConfig {
   type: TriggerType;
-  // For ONCHAIN
+  // Legacy ONCHAIN fields (kept for compatibility)
   contractAddress?: string;
   eventName?: string;
   chainId?: number;
+  abi?: any[]; // Store fetched ABI for event decoding
+  // New multi-event ONCHAIN fields
+  mode?: "single" | "multi"; // Default: 'single'
+  events?: EventMonitor[]; // For multi-event mode
   // For CRON
   cronExpression?: string;
   timezone?: string;
@@ -211,5 +215,37 @@ export interface NFTMetadata {
   description?: string;
   image?: string;
   attributes?: any[];
+}
+
+// Event monitoring types
+export interface EventMonitor {
+  id: string;
+  contractAddress: string;
+  eventName: string;
+  eventSignature?: string; // e.g., "Transfer(address,address,uint256)"
+  abi?: any[];
+  filters?: EventFilter[];
+  description?: string;
+}
+
+export interface EventFilter {
+  parameter: string; // Parameter name from event (e.g., "from", "to", "value")
+  parameterIndex: number; // Index in event parameters
+  operator: "eq" | "ne" | "gt" | "lt" | "gte" | "lte" | "contains";
+  value: string | number;
+  indexed: boolean; // Whether this parameter is indexed (can use in GraphQL topics)
+}
+
+export interface EventDefinition {
+  name: string;
+  type: "event";
+  inputs: EventParameter[];
+}
+
+export interface EventParameter {
+  name: string;
+  type: string;
+  indexed: boolean;
+  internalType?: string;
 }
 
