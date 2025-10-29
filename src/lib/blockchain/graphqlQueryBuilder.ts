@@ -68,52 +68,54 @@ export function buildLogFilterQuery(options: GraphQLQueryOptions = {}): string {
   const filters: string[] = [];
 
   if (addresses.length > 0) {
-    const addressesStr = addresses.map(addr => `"${addr}"`).join(', ');
+    const addressesStr = addresses.map((addr) => `"${addr}"`).join(", ");
     filters.push(`addresses: [${addressesStr}]`);
   }
 
   // Build topics array with indexed parameter filters
-  // Alchemy format: topics: ["0x..."] for event signature only
+  // Alchemy supports topics as [eventSig, topic1, topic2, topic3] with nulls for wildcards
+  // We include indexed parameter filters here to reduce webhook volume
   if (eventSignatures.length > 0) {
-    // Use the first event signature (or combine multiple)
-    const topicSignature = eventSignatures.length === 1
-      ? eventSignatures[0]
-      : eventSignatures[0]; // For now, use first signature
+    const topics = buildTopicsArray(eventSignatures, topicFilters);
 
-    filters.push(`topics: ["${topicSignature}"]`);
+    const formatTopicItem = (item: string | string[] | null): string => {
+      if (item === null) return "null";
+      if (Array.isArray(item)) {
+        return `[${item.map((v) => `"${v}"`).join(", ")}]`;
+      }
+      return `"${item}"`;
+    };
 
-    // If we have topic filters for indexed parameters, we might need to handle them differently
-    // But for now, Alchemy's UI only shows the event signature in topics
+    const topicsStr = `[${topics.map(formatTopicItem).join(", ")}]`;
+    filters.push(`topics: ${topicsStr}`);
   }
 
-  const filterStr = filters.length > 0 ? `filter: {${filters.join(', ')}}` : '';
+  const filterStr = filters.length > 0 ? `filter: {${filters.join(", ")}}` : "";
 
   // Build the query structure to match Alchemy's UI format exactly
-  // Note: No space after "filter:" and comma-separated filters
-  let query = '{\n  block {\n';
+  // This format ensures Alchemy only sends webhooks when matching logs exist
+  let query = "{\n  block {\n";
+  query += "    hash,\n    number,\n    timestamp,\n";
 
-  if (includeBlockDetails) {
-    query += '    hash,\n    number,\n    timestamp,\n';
-  }
-
-  query += `    logs${filterStr ? `(${filterStr})` : '()'} {\n`;
-  query += '      data,\n      topics,\n      index,\n';
-  query += '      account {\n        address\n      }';
+  // Build logs query with filter - this is critical for skip_empty_messages to work
+  query += `    logs(${filterStr || "filter: {}"}) {\n`;
+  query += "      data,\n      topics,\n      index,\n";
+  query += "      account {\n        address\n      }";
 
   if (includeTransactionDetails) {
-    query += ',\n      transaction {\n';
-    query += '        hash,\n        nonce,\n        index,\n';
-    query += '        from {\n          address\n        },\n';
-    query += '        to {\n          address\n        },\n';
-    query += '        value,\n        gasPrice,\n';
-    query += '        maxFeePerGas,\n        maxPriorityFeePerGas,\n';
-    query += '        gas,\n        status,\n        gasUsed,\n';
-    query += '        cumulativeGasUsed,\n        effectiveGasPrice,\n';
-    query += '        createdContract {\n          address\n        }\n';
-    query += '      }\n';
+    query += ",\n      transaction {\n";
+    query += "        hash,\n        nonce,\n        index,\n";
+    query += "        from {\n          address\n        },\n";
+    query += "        to {\n          address\n        },\n";
+    query += "        value,\n        gasPrice,\n";
+    query += "        maxFeePerGas,\n        maxPriorityFeePerGas,\n";
+    query += "        gas,\n        status,\n        gasUsed,\n";
+    query += "        cumulativeGasUsed,\n        effectiveGasPrice,\n";
+    query += "        createdContract {\n          address\n        }\n";
+    query += "      }\n";
   }
 
-  query += '    }\n  }\n}';
+  query += "    }\n  }\n}";
 
   return query;
 }
