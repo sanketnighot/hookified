@@ -40,8 +40,10 @@ export class TelegramAction implements ActionDefinition<TelegramConfig> {
           type: "textarea",
           placeholder: "🚨 Alert: {eventName} detected!",
           required: false,
+          supportsVariables: true,
+          editorType: "telegram-rich-text",
           description:
-            "Use {variable} for dynamic values (e.g., {eventName}, {contractAddress})",
+            "Use variables and formatting toolbar to create rich messages",
         },
       ],
     };

@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormField } from "@/lib/plugins/types";
 import { AlertCircle } from "lucide-react";
+import { TelegramRichTextEditor } from "../TelegramRichTextEditor";
+import { VariablePickerInput } from "../VariableInput";
 import { CronScheduleField } from "./CronScheduleField";
 import { TelegramChatIdField } from "./TelegramChatIdField";
 
@@ -14,6 +16,8 @@ interface DynamicFieldProps {
   onChange: (value: any) => void;
   error?: string;
   actionType?: string;
+  actionIndex?: number; // For context-aware variable suggestions
+  supportsVariables?: boolean; // Flag to use variable picker
 }
 
 export function DynamicField({
@@ -22,6 +26,8 @@ export function DynamicField({
   onChange,
   error,
   actionType,
+  actionIndex,
+  supportsVariables,
 }: DynamicFieldProps) {
   const handleChange = (newValue: any) => {
     onChange(newValue);
@@ -78,6 +84,32 @@ export function DynamicField({
         );
 
       case "textarea":
+        // Check if this field uses Telegram rich text editor
+        if (field.editorType === "telegram-rich-text") {
+          return (
+            <TelegramRichTextEditor
+              value={value || ""}
+              onChange={handleChange}
+              placeholder={field.placeholder}
+            />
+          );
+        }
+
+        // Check if this field supports variables
+        const shouldUseVariablePicker =
+          supportsVariables || field.supportsVariables;
+
+        if (shouldUseVariablePicker) {
+          return (
+            <VariablePickerInput
+              value={value || ""}
+              onChange={handleChange}
+              placeholder={field.placeholder}
+              multiline={true}
+            />
+          );
+        }
+
         return (
           <textarea
             value={value || ""}

@@ -19,49 +19,80 @@ export class WebhookExecutor extends BaseActionExecutor {
     try {
       // Validate configuration
       if (!actionConfig.webhookUrl) {
-        throw new Error('Missing required Webhook configuration: webhookUrl is required');
+        throw new Error(
+          "Missing required Webhook configuration: webhookUrl is required"
+        );
       }
 
       // Validate URL
       try {
         new URL(actionConfig.webhookUrl);
       } catch {
-        throw new Error('Invalid webhook URL format');
+        throw new Error("Invalid webhook URL format");
       }
 
-      const method = actionConfig.method || 'POST';
+      const method = actionConfig.method || "POST";
+
+      // Interpolate headers if they contain variables
+      const enrichedContext = {
+        ...context.variables,
+        hookId: context.hookId,
+        runId: context.runId,
+        timestamp: new Date().toISOString(),
+      };
+
       const headers = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Hookified/1.0',
-        ...actionConfig.headers,
+        "Content-Type": "application/json",
+        "User-Agent": "Hookified/1.0",
+        ...(actionConfig.headers
+          ? Object.fromEntries(
+              Object.entries(actionConfig.headers).map(([key, value]) => [
+                key,
+                typeof value === "string" && value.includes("{")
+                  ? interpolateVariables(value, enrichedContext)
+                  : value,
+              ])
+            )
+          : {}),
       };
 
       // Prepare body with variable interpolation
       let body: string | undefined;
-      if (actionConfig.bodyTemplate && ['POST', 'PUT', 'PATCH'].includes(method)) {
-        body = interpolateVariables(actionConfig.bodyTemplate, {
-          ...context.triggerContext,
+      if (
+        actionConfig.bodyTemplate &&
+        ["POST", "PUT", "PATCH"].includes(method)
+      ) {
+        // Add common runtime variables to context
+        const enrichedContext = {
+          ...context.variables,
           hookId: context.hookId,
           runId: context.runId,
           timestamp: new Date().toISOString(),
-        });
+        };
+        body = interpolateVariables(actionConfig.bodyTemplate, enrichedContext);
       }
 
       // Execute with retry and timeout
       const result = await this.executeWithRetry(
-        () => this.executeWithTimeout(
-          this.makeWebhookRequest(actionConfig.webhookUrl, method, headers, body),
-          EXECUTION_CONFIG.TIMEOUTS.WEBHOOK,
-          'WEBHOOK'
-        ),
-        'WEBHOOK'
+        () =>
+          this.executeWithTimeout(
+            this.makeWebhookRequest(
+              actionConfig.webhookUrl,
+              method,
+              headers,
+              body
+            ),
+            EXECUTION_CONFIG.TIMEOUTS.WEBHOOK,
+            "WEBHOOK"
+          ),
+        "WEBHOOK"
       );
 
       return this.createExecutionResult(
         actionId,
-        'WEBHOOK',
+        "WEBHOOK",
         startedAt,
-        'SUCCESS',
+        "SUCCESS",
         result
       );
     } catch (error) {

@@ -32,6 +32,8 @@ export interface FormField {
   validation?: FieldValidation;
   options?: SelectOption[]; // For select fields
   default?: any;
+  supportsVariables?: boolean; // Flag to enable variable picker for this field
+  editorType?: "telegram-rich-text"; // Flag to use Telegram rich text editor
 }
 
 export interface FormSchema {

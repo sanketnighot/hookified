@@ -25,7 +25,10 @@ export interface AppConfig {
   // External Services
   alchemy: {
     apiKey: string;
+    authToken?: string; // Dashboard API authentication
+    appId?: string; // Application ID
     baseUrl: string;
+    dashboardApiUrl: string; // Dashboard API URL
     webhookSecret?: string;
   };
 
@@ -97,8 +100,13 @@ function loadConfig(): AppConfig {
     },
     alchemy: {
       apiKey: requiredVars.ALCHEMY_API_KEY || "",
+      authToken: process.env.ALCHEMY_AUTH_TOKEN,
+      appId: process.env.ALCHEMY_APP_ID,
       baseUrl:
         process.env.ALCHEMY_BASE_URL || "https://eth-mainnet.g.alchemy.com",
+      dashboardApiUrl:
+        process.env.ALCHEMY_DASHBOARD_API_URL ||
+        "https://dashboard.alchemy.com/api",
       webhookSecret: process.env.ALCHEMY_WEBHOOK_SECRET,
     },
     telegram: {

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { DynamicForm } from "../DynamicForm";
+import { ActionVariableContext } from "../VariableInput";
 import { ContractCallActionForm } from "./ConfigForms/ContractCallActionForm";
 
 interface ActionBlockProps {
@@ -34,6 +35,15 @@ interface ActionBlockProps {
   onReorder: (fromIndex: number, toIndex: number) => void;
   index: number;
   totalActions: number;
+  // For variable context
+  triggerType?: string;
+  triggerConfig?: any;
+  allActions?: Array<{
+    id: string;
+    type: string;
+    config?: any;
+    customName?: string;
+  }>;
 }
 
 const ACTION_ICONS = {
@@ -50,6 +60,9 @@ export function ActionBlockComponent({
   onReorder,
   index,
   totalActions,
+  triggerType,
+  triggerConfig,
+  allActions = [],
 }: ActionBlockProps) {
   const [isExpanded, setIsExpanded] = useState(action.isExpanded);
   const [isDragging, setIsDragging] = useState(false);
@@ -155,13 +168,27 @@ export function ActionBlockComponent({
     }
 
     return (
-      <DynamicForm
-        schema={schema}
-        values={action.config}
-        onChange={handleConfigChange}
-        errors={action.errors}
-        actionType={action.type}
-      />
+      <ActionVariableContext
+        actionIndex={index}
+        triggerType={triggerType}
+        triggerConfig={triggerConfig}
+        actions={allActions.map((a, i) => ({
+          id: a.id,
+          type: a.type,
+          config: a.config,
+          index: i,
+          customName: (a as any).customName,
+        }))}
+      >
+        <DynamicForm
+          schema={schema}
+          values={action.config}
+          onChange={handleConfigChange}
+          errors={action.errors}
+          actionType={action.type}
+          actionIndex={index}
+        />
+      </ActionVariableContext>
     );
   };
 

@@ -17,7 +17,9 @@ export class ChainExecutor extends BaseActionExecutor {
     try {
       // Validate configuration
       if (!actionConfig.targetHookId) {
-        throw new Error('Missing required Chain configuration: targetHookId is required');
+        throw new Error(
+          "Missing required Chain configuration: targetHookId is required"
+        );
       }
 
       // TODO: Implement chain execution logic
@@ -26,19 +28,22 @@ export class ChainExecutor extends BaseActionExecutor {
       // 2. Validating it's active and accessible
       // 3. Triggering its execution
       // 4. Handling the result
+      //
+      // Note: Variable interpolation is available in context.variables
+      // for passing data from previous actions to the chained hook
 
       // For now, return a placeholder success
       const result = {
         targetHookId: actionConfig.targetHookId,
-        status: 'triggered',
-        message: 'Chain execution not yet implemented',
+        status: "triggered",
+        message: "Chain execution not yet implemented",
       };
 
       return this.createExecutionResult(
         actionId,
-        'CHAIN',
+        "CHAIN",
         startedAt,
-        'SUCCESS',
+        "SUCCESS",
         result
       );
     } catch (error) {

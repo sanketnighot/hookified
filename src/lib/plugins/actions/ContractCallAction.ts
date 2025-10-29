@@ -51,45 +51,50 @@ export class ContractCallAction implements ActionDefinition<ContractCallConfig> 
     return {
       fields: [
         {
-          name: 'contractAddress',
-          label: 'Contract Address',
-          type: 'text',
-          placeholder: '0x...',
+          name: "contractAddress",
+          label: "Contract Address",
+          type: "text",
+          placeholder: "0x...",
           required: true,
-          validation: { pattern: '^0x[a-fA-F0-9]{40}$' },
-          description: 'The smart contract address to call'
+          validation: { pattern: "^0x[a-fA-F0-9]{40}$" },
+          description: "The smart contract address to call",
         },
         {
-          name: 'functionName',
-          label: 'Function Name',
-          type: 'text',
-          placeholder: 'transfer',
+          name: "functionName",
+          label: "Function Name",
+          type: "text",
+          placeholder: "transfer",
           required: true,
-          description: 'The function name to execute'
+          description: "The function name to execute",
         },
         {
-          name: 'parameters',
-          label: 'Parameters (JSON)',
-          type: 'textarea',
+          name: "parameters",
+          label: "Parameters (JSON)",
+          type: "textarea",
           placeholder: '["0x123...", "1000000"]',
           required: false,
-          description: 'Function parameters as JSON array'
+          description: "Function parameters as JSON array",
         },
         {
-          name: 'chainId',
-          label: 'Chain',
-          type: 'select',
+          name: "chainId",
+          label: "Chain",
+          type: "select",
           required: true,
           options: [
-            { value: 1, label: 'Ethereum Mainnet' },
-            { value: 137, label: 'Polygon' },
-            { value: 56, label: 'BSC' },
-            { value: 42161, label: 'Arbitrum' },
-            { value: 10, label: 'Optimism' }
+            { value: 1, label: "Ethereum Mainnet" },
+            { value: 11155111, label: "Sepolia Testnet" },
+            { value: 137, label: "Polygon" },
+            { value: 80002, label: "Polygon Amoy" },
+            { value: 56, label: "BSC" },
+            { value: 97, label: "BSC Testnet" },
+            { value: 42161, label: "Arbitrum" },
+            { value: 10, label: "Optimism" },
+            { value: 8453, label: "Base" },
+            { value: 84532, label: "Base Sepolia" },
           ],
-          description: 'Select the blockchain network'
-        }
-      ]
+          description: "Select the blockchain network",
+        },
+      ],
     };
   }
 }

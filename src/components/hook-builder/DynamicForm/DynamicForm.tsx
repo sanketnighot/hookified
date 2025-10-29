@@ -9,6 +9,7 @@ interface DynamicFormProps {
   onChange: (values: any) => void;
   errors?: string[];
   actionType?: string;
+  actionIndex?: number; // For context-aware variable suggestions
 }
 
 export function DynamicForm({
@@ -17,10 +18,15 @@ export function DynamicForm({
   onChange,
   errors = [],
   actionType,
+  actionIndex,
 }: DynamicFormProps) {
   const handleFieldChange = (fieldName: string, value: any) => {
     // Special handling for cronExpression field - it returns an object with both cronExpression and timezone
-    if (fieldName === 'cronExpression' && typeof value === 'object' && value.cronExpression !== undefined) {
+    if (
+      fieldName === "cronExpression" &&
+      typeof value === "object" &&
+      value.cronExpression !== undefined
+    ) {
       onChange({
         ...values,
         cronExpression: value.cronExpression,
@@ -58,6 +64,7 @@ export function DynamicForm({
           onChange={(value) => handleFieldChange(field.name, value)}
           error={getFieldError(field.name)}
           actionType={actionType}
+          actionIndex={actionIndex}
         />
       ))}
     </div>

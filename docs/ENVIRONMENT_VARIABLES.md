@@ -23,11 +23,14 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
 ## External Service APIs
 
-### Alchemy Notify (for ONCHAIN triggers)
+### Alchemy Custom Webhooks (for ONCHAIN triggers)
 ```bash
-ALCHEMY_API_KEY="your-alchemy-api-key"
+ALCHEMY_API_KEY="your-alchemy-api-key"  # Required
+ALCHEMY_AUTH_TOKEN="your-alchemy-auth-token"  # Required for Dashboard API
+ALCHEMY_APP_ID="your-alchemy-app-id"  # Optional, may be required for webhook creation
 ALCHEMY_BASE_URL="https://eth-mainnet.g.alchemy.com"  # Optional, defaults to mainnet
-ALCHEMY_WEBHOOK_SECRET="your-alchemy-webhook-secret"  # Optional, for webhook verification
+ALCHEMY_DASHBOARD_API_URL="https://dashboard.alchemy.com/api"  # Optional, defaults to Alchemy Dashboard API
+ALCHEMY_WEBHOOK_SECRET="your-alchemy-webhook-secret"  # Required for webhook signature verification
 ```
 
 ### Telegram Bot (for TELEGRAM actions)
@@ -65,10 +68,34 @@ CRON_SECRET="your-cron-job-secret"
 ## Environment Variable Details
 
 ### ALCHEMY_API_KEY
-- **Purpose**: API key for Alchemy Notify service to monitor blockchain events
+- **Purpose**: API key for Alchemy services
 - **Required for**: ONCHAIN trigger type hooks
 - **How to get**: Sign up at [Alchemy](https://www.alchemy.com/) and create an API key
 - **Format**: String (e.g., "alcht_1234567890abcdef")
+
+### ALCHEMY_AUTH_TOKEN
+- **Purpose**: Authentication token for Alchemy Dashboard API to create/manage webhooks
+- **Required for**: ONCHAIN trigger type hooks (webhook creation and deletion)
+- **How to get**:
+  1. Sign in to your Alchemy Dashboard at https://dashboard.alchemy.com
+  2. Navigate to the Webhooks section
+  3. Look for the "Auth Token" in the top right of the page
+  4. Copy this token to use with the Notify API
+- **Format**: String token for X-Alchemy-Token header
+- **Note**: This is different from your API key - it's specifically for webhook management
+
+### ALCHEMY_APP_ID
+- **Purpose**: Application ID for Alchemy webhook management (may be required)
+- **Required for**: ONCHAIN trigger type hooks (webhook creation, if required by Alchemy)
+- **How to get**: Available in your Alchemy Dashboard
+- **Format**: String identifier
+
+### ALCHEMY_WEBHOOK_SECRET
+- **Purpose**: Secret key for verifying webhook signatures from Alchemy
+- **Required for**: Webhook signature verification (recommended for production)
+- **How to get**: Configure in your Alchemy webhook settings
+- **Format**: String secret key
+- **Security**: Keep this secret secure and never commit to version control
 
 ### TELEGRAM_BOT_TOKEN
 - **Purpose**: Bot token for sending messages via Telegram Bot API

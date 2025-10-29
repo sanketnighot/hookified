@@ -1,5 +1,6 @@
-import { registry } from '@/lib/plugins';
-import { prisma } from '@/lib/prisma';
+import { migrateOnchainConfig } from "@/lib/migrations/onchainConfigMigration";
+import { registry } from "@/lib/plugins";
+import { prisma } from "@/lib/prisma";
 import { CronJobManager } from "@/services/triggers/CronJobManager";
 import { OnchainEngine } from "@/services/triggers/OnchainEngine";
 import crypto from "crypto";
@@ -17,6 +18,11 @@ export class HookService {
         ...data.triggerConfig,
         secret: webhookSecret,
       };
+    }
+
+    // Apply migration to ensure consistent format for ONCHAIN triggers
+    if (data.triggerType === "ONCHAIN") {
+      finalTriggerConfig = migrateOnchainConfig(finalTriggerConfig);
     }
 
     // Validate trigger
@@ -71,11 +77,24 @@ export class HookService {
         const onchainEngine = new OnchainEngine();
         await onchainEngine.registerWebhook(hook);
       } catch (error) {
-        console.error(
-          `Failed to register ONCHAIN webhook for hook ${hook.id}:`,
-          error
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+
+        // Delete the hook from database since webhook registration failed
+        try {
+          await prisma.hook.delete({
+            where: { id: hook.id },
+          });
+        } catch (deleteError) {
+          // Ignore deletion errors
+        }
+
+        // Throw the error to prevent hook creation
+        throw new Error(
+          `Failed to create ONCHAIN hook: ${errorMessage}. ` +
+            `The hook was not saved because webhook registration with Alchemy failed. ` +
+            `Please check your Alchemy configuration and try again.`
         );
-        // Don't fail the hook creation, just log the error
       }
     }
 
@@ -150,9 +169,15 @@ export class HookService {
 
     // Validate if trigger config is being updated
     if (data.triggerConfig && data.triggerType) {
+      // Apply migration for ONCHAIN triggers
+      let triggerConfigToValidate = data.triggerConfig;
+      if (data.triggerType === "ONCHAIN") {
+        triggerConfigToValidate = migrateOnchainConfig(data.triggerConfig);
+      }
+
       const triggerValidation = registry.validateTriggerConfig(
         data.triggerType,
-        data.triggerConfig
+        triggerConfigToValidate
       );
 
       if (!triggerValidation.isValid) {
@@ -181,13 +206,39 @@ export class HookService {
       }
     }
 
+    const updateData: any = {
+      ...(data as any),
+      updatedAt: new Date(),
+    };
+
+    // Apply migration if triggerConfig is being updated for ONCHAIN
+    if (data.triggerConfig && existingHook.triggerType === "ONCHAIN") {
+      updateData.triggerConfig = migrateOnchainConfig(data.triggerConfig);
+    }
+
     const updatedHook = await prisma.hook.update({
       where: { id },
-      data: {
-        ...(data as any),
-        updatedAt: new Date(),
-      },
+      data: updateData,
     });
+
+    // Re-register Alchemy webhook if triggerConfig changed for ONCHAIN hooks
+    if (data.triggerConfig && existingHook.triggerType === "ONCHAIN") {
+      try {
+        const onchainEngine = new OnchainEngine();
+        // Delete old webhook first
+        if (existingHook.alchemyWebhookId) {
+          await onchainEngine.unregisterWebhook(existingHook);
+        }
+        // Create new webhook with updated config
+        await onchainEngine.registerWebhook(updatedHook);
+      } catch (error) {
+        console.error(
+          `Failed to update Alchemy webhook for hook ${id}:`,
+          error
+        );
+        // Don't fail the update, just log the error
+      }
+    }
 
     // Update cron job if trigger config changed
     if (data.triggerConfig && existingHook.triggerType === "CRON") {

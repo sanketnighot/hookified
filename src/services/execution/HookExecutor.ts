@@ -10,6 +10,7 @@ import {
     HookExecutionResult,
     TriggerContext
 } from './types';
+import { VariableContextBuilder } from "./VariableContextBuilder";
 
 export class HookExecutor {
   private actionExecutors = new Map<string, any>([
@@ -43,22 +44,17 @@ export class HookExecutor {
 
     try {
       // Validate hook is active
-      if (!hook.isActive || hook.status !== 'ACTIVE') {
-        throw new Error('Hook is not active');
+      if (!hook.isActive || hook.status !== "ACTIVE") {
+        throw new Error("Hook is not active");
       }
 
       // Validate actions exist
       if (!hook.actions || hook.actions.length === 0) {
-        throw new Error('Hook has no actions configured');
+        throw new Error("Hook has no actions configured");
       }
 
-      // Create execution context
-      const context: ExecutionContext = {
-        hookId: hook.id,
-        userId: hook.userId,
-        triggerContext: triggerContext?.data,
-        runId,
-      };
+      // Initialize variable context builder with trigger data
+      const variableBuilder = new VariableContextBuilder(triggerContext?.data);
 
       // Execute actions sequentially
       const actionResults = [];
@@ -73,33 +69,60 @@ export class HookExecutor {
         }
 
         try {
+          // Create execution context with current variable state
+          const context: ExecutionContext = {
+            hookId: hook.id,
+            userId: hook.userId,
+            triggerContext: triggerContext?.data,
+            runId,
+            variables: variableBuilder.getContext(),
+          };
+
           const result = await executor.execute(action.config, context);
           actionResults.push(result);
 
+          // Add result to variable context for next actions (even if failed)
+          variableBuilder.addActionResult(
+            i,
+            action.id || `action-${i}`,
+            action.type,
+            result
+          );
+
           // If this action failed, stop execution
-          if (result.status === 'FAILED') {
+          if (result.status === "FAILED") {
             failedAt = i;
             break;
           }
         } catch (error) {
           // Create a failed result for this action
           const failedResult = {
-            actionId: action.id,
+            actionId: action.id || `action-${i}`,
             actionType: action.type,
-            status: 'FAILED' as const,
+            status: "FAILED" as const,
             startedAt: new Date().toISOString(),
             completedAt: new Date().toISOString(),
             duration: 0,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : "Unknown error",
+            result: undefined,
           };
           actionResults.push(failedResult);
+
+          // Add failed result to variable context
+          variableBuilder.addActionResult(
+            i,
+            action.id || `action-${i}`,
+            action.type,
+            failedResult
+          );
+
           failedAt = i;
           break;
         }
       }
 
       const totalDuration = Date.now() - startTime;
-      const overallStatus = failedAt !== undefined ? 'FAILED' : 'SUCCESS';
+      const overallStatus = failedAt !== undefined ? "FAILED" : "SUCCESS";
 
       // Prepare execution meta
       const meta: ExecutionMeta = {
@@ -116,7 +139,10 @@ export class HookExecutor {
           status: overallStatus,
           completedAt: new Date(),
           meta: meta as any,
-          error: failedAt !== undefined ? `Action ${failedAt + 1} failed` : undefined,
+          error:
+            failedAt !== undefined
+              ? `Action ${failedAt + 1} failed`
+              : undefined,
         },
       });
 
@@ -134,9 +160,9 @@ export class HookExecutor {
         totalDuration,
         actions: actionResults,
         failedAt,
-        error: failedAt !== undefined ? `Action ${failedAt + 1} failed` : undefined,
+        error:
+          failedAt !== undefined ? `Action ${failedAt + 1} failed` : undefined,
       };
-
     } catch (error) {
       const totalDuration = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
