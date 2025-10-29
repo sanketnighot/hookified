@@ -1,4 +1,5 @@
 import { getTelegramConfig, isTelegramConfigured } from '@/lib/config';
+import { convertToTelegramEntities } from "@/lib/telegram/entityConverter";
 import { BaseActionExecutor } from '../ActionExecutor';
 import { ActionExecutionResult, EXECUTION_CONFIG, ExecutionContext, interpolateVariables } from '../types';
 
@@ -19,46 +20,69 @@ export class TelegramExecutor extends BaseActionExecutor {
     try {
       // Check if Telegram is configured
       if (!isTelegramConfigured()) {
-        throw new Error('Telegram bot token not configured in environment variables');
+        throw new Error(
+          "Telegram bot token not configured in environment variables"
+        );
       }
 
       const telegramConfig = getTelegramConfig();
 
       // Validate configuration
       if (!actionConfig.chatId) {
-        throw new Error('Missing required Telegram configuration: chatId is required');
+        throw new Error(
+          "Missing required Telegram configuration: chatId is required"
+        );
       }
 
       // Resolve username to chat ID if needed
       let chatId = actionConfig.chatId;
       if (!this.isNumericChatId(chatId)) {
-        chatId = await this.resolveUsernameToChatId(telegramConfig.botToken, chatId);
+        chatId = await this.resolveUsernameToChatId(
+          telegramConfig.botToken,
+          chatId
+        );
       }
 
       // Prepare message with variable interpolation
-      const messageTemplate = actionConfig.messageTemplate || '🚨 Hook executed successfully!';
-      const message = interpolateVariables(messageTemplate, {
-        ...context.triggerContext,
+      const messageTemplate =
+        actionConfig.messageTemplate || "🚨 Hook executed successfully!";
+      // Add common runtime variables to context
+      const enrichedContext = {
+        ...context.variables,
         hookId: context.hookId,
         runId: context.runId,
         timestamp: new Date().toISOString(),
-      });
+      };
+      // Interpolate variables in markup text
+      const interpolatedMarkup = interpolateVariables(
+        messageTemplate,
+        enrichedContext
+      );
+
+      // Convert markup to Telegram entities
+      const { text, entities } = convertToTelegramEntities(interpolatedMarkup);
 
       // Execute with retry and timeout
       const result = await this.executeWithRetry(
-        () => this.executeWithTimeout(
-          this.sendTelegramMessage(telegramConfig.botToken, chatId, message),
-          EXECUTION_CONFIG.TIMEOUTS.TELEGRAM,
-          'TELEGRAM'
-        ),
-        'TELEGRAM'
+        () =>
+          this.executeWithTimeout(
+            this.sendTelegramMessage(
+              telegramConfig.botToken,
+              chatId,
+              text,
+              entities
+            ),
+            EXECUTION_CONFIG.TIMEOUTS.TELEGRAM,
+            "TELEGRAM"
+          ),
+        "TELEGRAM"
       );
 
       return this.createExecutionResult(
         actionId,
-        'TELEGRAM',
+        "TELEGRAM",
         startedAt,
-        'SUCCESS',
+        "SUCCESS",
         result
       );
     } catch (error) {
@@ -125,20 +149,27 @@ export class TelegramExecutor extends BaseActionExecutor {
   private async sendTelegramMessage(
     botToken: string,
     chatId: string,
-    message: string
+    text: string,
+    entities?: any[]
   ): Promise<any> {
     const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+
+    const payload: any = {
+      chat_id: chatId,
+      text: text,
+    };
+
+    // Only include entities if we have formatting
+    if (entities && entities.length > 0) {
+      payload.entities = entities;
+    }
 
     const response = await fetch(telegramApiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'HTML', // Allow basic HTML formatting
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {

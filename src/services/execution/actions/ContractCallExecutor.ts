@@ -12,7 +12,11 @@ import {
   sepolia,
 } from "viem/chains";
 import { BaseActionExecutor } from '../ActionExecutor';
-import { ActionExecutionResult, ExecutionContext } from '../types';
+import {
+  ActionExecutionResult,
+  ExecutionContext,
+  interpolateVariables,
+} from "../types";
 
 export interface ContractCallConfig {
   contractAddress: string;
@@ -105,19 +109,22 @@ export class ContractCallExecutor extends BaseActionExecutor {
         actionConfig.chainId
       );
 
+      // Resolve variables in parameters
+      const resolvedConfig = this.resolveConfigVariables(actionConfig, context);
+
       let result: any;
 
-      if (actionConfig.isNativeTransfer) {
+      if (resolvedConfig.isNativeTransfer) {
         // Handle native token transfer
         result = await this.executeNativeTransfer(
-          actionConfig,
+          resolvedConfig,
           walletClient,
           publicClient
         );
       } else {
         // Handle contract function call
         result = await this.executeContractCall(
-          actionConfig,
+          resolvedConfig,
           walletClient,
           publicClient
         );
@@ -140,6 +147,34 @@ export class ContractCallExecutor extends BaseActionExecutor {
         error instanceof Error ? error.message : "Unknown error"
       );
     }
+  }
+
+  /**
+   * Resolve variables in configuration parameters.
+   * Supports variable interpolation in parameter values.
+   */
+  private resolveConfigVariables(
+    config: ContractCallConfig,
+    context: ExecutionContext
+  ): ContractCallConfig {
+    const enrichedContext = {
+      ...context.variables,
+      hookId: context.hookId,
+      runId: context.runId,
+      timestamp: new Date().toISOString(),
+    };
+
+    const resolvedParameters = config.parameters?.map((param) => {
+      if (typeof param === "string" && param.includes("{")) {
+        return interpolateVariables(param, enrichedContext);
+      }
+      return param;
+    });
+
+    return {
+      ...config,
+      parameters: resolvedParameters,
+    };
   }
 
   private async executeNativeTransfer(

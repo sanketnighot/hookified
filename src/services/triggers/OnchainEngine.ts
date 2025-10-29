@@ -143,10 +143,12 @@ export class OnchainEngine {
           throw new Error("GraphQL query cannot be empty");
         }
 
-        // Log request summary (minimal logging)
+        // Log request summary and GraphQL query for debugging
         console.log(
           `Creating Alchemy webhook for ${networkFormatted} with skip_empty_messages`
         );
+        console.log("Generated GraphQL Query:");
+        console.log(graphqlQuery);
 
         const response = await axios.post(webhookApiUrl, requestBody, {
           headers,
@@ -384,6 +386,14 @@ export class OnchainEngine {
         });
       }
     });
+
+    // Guard: prevent registering a webhook that matches everything
+    // Require at least one address and one event signature
+    if (addresses.length === 0 || eventSignatures.length === 0) {
+      throw new Error(
+        "Invalid ONCHAIN trigger: at least one contract address and event signature are required to build a GraphQL filter"
+      );
+    }
 
     return buildLogFilterQuery({
       addresses,
