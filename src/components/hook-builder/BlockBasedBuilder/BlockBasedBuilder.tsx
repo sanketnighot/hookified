@@ -33,6 +33,7 @@ import { ArrowLeft, Save, Sparkles, TestTube } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { VariableContextProvider } from "../VariableInput";
 import { ActionBlockComponent } from "./ActionBlock";
 import { AddBlockMenu } from "./AddBlockMenu";
 import { TemplateQuickStart } from "./TemplateQuickStart";
@@ -479,183 +480,198 @@ function BlockBasedBuilderContent() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={slideUpVariants}
-        className="mb-8"
-      >
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="glass border-white/20"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">
-              {editHookId ? "Edit Hook" : "Create Hook"}
-            </h1>
-            <p className="text-muted-foreground">
-              {editHookId
-                ? "Update your automation hook"
-                : "Build your automation with blocks"}
-            </p>
+    <VariableContextProvider
+      triggerType={builderState.triggerType}
+      triggerConfig={builderState.triggerConfig}
+      actions={builderState.actions.map((action, index) => ({
+        id: action.id,
+        type: action.type,
+        config: action.config,
+        index,
+        customName: action.customName,
+      }))}
+    >
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={slideUpVariants}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <Button
+              variant="outline"
+              onClick={() => router.back()}
+              className="glass border-white/20"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold">
+                {editHookId ? "Edit Hook" : "Create Hook"}
+              </h1>
+              <p className="text-muted-foreground">
+                {editHookId
+                  ? "Update your automation hook"
+                  : "Build your automation with blocks"}
+              </p>
+            </div>
+            <Button
+              onClick={() => setIsTemplateOpen(true)}
+              variant="outline"
+              className="glass border-white/20"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Templates
+            </Button>
           </div>
-          <Button
-            onClick={() => setIsTemplateOpen(true)}
-            variant="outline"
-            className="glass border-white/20"
+
+          {/* Hook Name */}
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="hook-name">Hook Name</Label>
+            <Input
+              id="hook-name"
+              placeholder="My Awesome Hook"
+              value={builderState.name}
+              onChange={(e) =>
+                setBuilderState((prev) => ({ ...prev, name: e.target.value }))
+              }
+              className="glass text-lg"
+            />
+          </div>
+
+          {/* Hook Description */}
+          <div className="space-y-2 mb-6">
+            <Label htmlFor="hook-description">Description (Optional)</Label>
+            <textarea
+              id="hook-description"
+              placeholder="What does this hook do? (optional)"
+              value={builderState.description || ""}
+              onChange={(e) =>
+                setBuilderState((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg glass border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+            />
+          </div>
+        </motion.div>
+
+        {/* Blocks Container */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainerVariants}
+          className="space-y-6"
+        >
+          {/* Trigger Block */}
+          <TriggerBlock
+            triggerType={builderState.triggerType}
+            triggerConfig={builderState.triggerConfig}
+            onChange={handleTriggerChange}
+            isValid={
+              validation.isValid &&
+              builderState.triggerConfig.type === builderState.triggerType
+            }
+            errors={validation.errors.filter(
+              (error) =>
+                error.includes("trigger") ||
+                error.includes("contract") ||
+                error.includes("cron") ||
+                error.includes("webhook")
+            )}
+          />
+
+          {/* Action Blocks */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Templates
+            <SortableContext
+              items={builderState.actions.map((action) => action.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <AnimatePresence>
+                {builderState.actions.map((action, index) => (
+                  <ActionBlockComponent
+                    key={action.id}
+                    action={action}
+                    onUpdate={handleUpdateAction}
+                    onDelete={handleDeleteAction}
+                    onReorder={handleReorderActions}
+                    index={index}
+                    totalActions={builderState.actions.length}
+                    triggerType={builderState.triggerType}
+                    triggerConfig={builderState.triggerConfig}
+                    allActions={builderState.actions}
+                  />
+                ))}
+              </AnimatePresence>
+            </SortableContext>
+          </DndContext>
+
+          {/* Add Action Block */}
+          <AddBlockMenu
+            onAddAction={handleAddAction}
+            disabled={!builderState.triggerType}
+          />
+        </motion.div>
+
+        {/* Validation Status */}
+        <ValidationPanel validation={validation} className="mt-8 mb-6" />
+
+        {/* Save Button */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={slideUpVariants}
+          className="flex justify-end gap-3"
+        >
+          <Button variant="outline" className="glass border-white/20">
+            <TestTube className="w-4 h-4 mr-2" />
+            Test Hook
           </Button>
-        </div>
-
-        {/* Hook Name */}
-        <div className="space-y-2 mb-4">
-          <Label htmlFor="hook-name">Hook Name</Label>
-          <Input
-            id="hook-name"
-            placeholder="My Awesome Hook"
-            value={builderState.name}
-            onChange={(e) =>
-              setBuilderState((prev) => ({ ...prev, name: e.target.value }))
-            }
-            className="glass text-lg"
-          />
-        </div>
-
-        {/* Hook Description */}
-        <div className="space-y-2 mb-6">
-          <Label htmlFor="hook-description">Description (Optional)</Label>
-          <textarea
-            id="hook-description"
-            placeholder="What does this hook do? (optional)"
-            value={builderState.description || ""}
-            onChange={(e) =>
-              setBuilderState((prev) => ({
-                ...prev,
-                description: e.target.value,
-              }))
-            }
-            rows={3}
-            className="w-full px-3 py-2 rounded-lg glass border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
-          />
-        </div>
-      </motion.div>
-
-      {/* Blocks Container */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={staggerContainerVariants}
-        className="space-y-6"
-      >
-        {/* Trigger Block */}
-        <TriggerBlock
-          triggerType={builderState.triggerType}
-          triggerConfig={builderState.triggerConfig}
-          onChange={handleTriggerChange}
-          isValid={
-            validation.isValid &&
-            builderState.triggerConfig.type === builderState.triggerType
-          }
-          errors={validation.errors.filter(
-            (error) =>
-              error.includes("trigger") ||
-              error.includes("contract") ||
-              error.includes("cron") ||
-              error.includes("webhook")
-          )}
-        />
-
-        {/* Action Blocks */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={builderState.actions.map((action) => action.id)}
-            strategy={verticalListSortingStrategy}
+          <Button
+            onClick={handleSave}
+            disabled={!validation.isValid || isSaving}
+            className="aurora-gradient-1"
           >
-            <AnimatePresence>
-              {builderState.actions.map((action, index) => (
-                <ActionBlockComponent
-                  key={action.id}
-                  action={action}
-                  onUpdate={handleUpdateAction}
-                  onDelete={handleDeleteAction}
-                  onReorder={handleReorderActions}
-                  index={index}
-                  totalActions={builderState.actions.length}
-                />
-              ))}
-            </AnimatePresence>
-          </SortableContext>
-        </DndContext>
+            <Save className="w-4 h-4 mr-2" />
+            {isSaving ? "Saving..." : "Save Hook"}
+          </Button>
+        </motion.div>
 
-        {/* Add Action Block */}
-        <AddBlockMenu
-          onAddAction={handleAddAction}
-          disabled={!builderState.triggerType}
+        {/* Template Quick Start */}
+        <TemplateQuickStart
+          templates={templates}
+          onApplyTemplate={handleApplyTemplate}
+          isOpen={isTemplateOpen}
+          onClose={() => setIsTemplateOpen(false)}
         />
-      </motion.div>
 
-      {/* Validation Status */}
-      <ValidationPanel validation={validation} className="mt-8 mb-6" />
-
-      {/* Save Button */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={slideUpVariants}
-        className="flex justify-end gap-3"
-      >
-        <Button variant="outline" className="glass border-white/20">
-          <TestTube className="w-4 h-4 mr-2" />
-          Test Hook
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={!validation.isValid || isSaving}
-          className="aurora-gradient-1"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {isSaving ? "Saving..." : "Save Hook"}
-        </Button>
-      </motion.div>
-
-      {/* Template Quick Start */}
-      <TemplateQuickStart
-        templates={templates}
-        onApplyTemplate={handleApplyTemplate}
-        isOpen={isTemplateOpen}
-        onClose={() => setIsTemplateOpen(false)}
-      />
-
-      {/* Webhook Success Modal */}
-      {showWebhookModal && webhookDetails && (
-        <WebhookSuccessModal
-          webhookUrl={webhookDetails.webhookUrl}
-          webhookSecret={webhookDetails.webhookSecret}
-          hookId={webhookDetails.hookId}
-          onClose={() => {
-            setShowWebhookModal(false);
-            setWebhookDetails(null);
-            // Clear draft and navigate to dashboard
-            localStorage.removeItem("hook-builder-draft");
-            router.push("/dashboard");
-          }}
-        />
-      )}
-    </div>
+        {/* Webhook Success Modal */}
+        {showWebhookModal && webhookDetails && (
+          <WebhookSuccessModal
+            webhookUrl={webhookDetails.webhookUrl}
+            webhookSecret={webhookDetails.webhookSecret}
+            hookId={webhookDetails.hookId}
+            onClose={() => {
+              setShowWebhookModal(false);
+              setWebhookDetails(null);
+              // Clear draft and navigate to dashboard
+              localStorage.removeItem("hook-builder-draft");
+              router.push("/dashboard");
+            }}
+          />
+        )}
+      </div>
+    </VariableContextProvider>
   );
 }
